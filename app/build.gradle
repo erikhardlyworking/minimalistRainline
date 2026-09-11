@@ -1,0 +1,37 @@
+plugins { id 'com.android.application' }
+
+def quoted = { String value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
+
+android {
+    namespace 'app.rainline'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'app.rainline'
+        minSdk 26
+        targetSdk 36
+        versionCode 6
+        versionName '0.1.5'
+        testInstrumentationRunner 'app.rainline.SmokeInstrumentation'
+        buildConfigField 'String', 'MET_CONTACT', quoted(providers.gradleProperty('metContact').getOrElse('https://github.com/erikhardlyworking/minimalistRainline'))
+        buildConfigField 'String', 'SOURCE_URL', quoted(providers.gradleProperty('sourceUrl').getOrElse('https://github.com/erikhardlyworking/minimalistRainline'))
+    }
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    lint { abortOnError true }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Rainline</string>
+    <string name="widget_description">A minimal two-hour precipitation forecast. Tap to open Yr.</string>
+    <string name="widget_loading">Precipitation forecast. Open Rainline to choose a location.</string>
+    <string name="search">Search</string>
+    <string name="searching">Searching…</string>
+    <string name="show_time_labels">Show numbers</string>
+    <string name="show_time_axis">Show time-axis line</string>
+    <string name="show_time_ticks">Show ticks</string>
+</resources>

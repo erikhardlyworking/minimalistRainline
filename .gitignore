@@ -1,0 +1,12 @@
+.gradle/
+.gradle-home/
+.build-cache/
+**/build/
+local.properties
+*.jks
+*.keystore
+.idea/
+*.iml
+output/
+# The reference screenshot contains personal information; keep design previews local.
+design/
