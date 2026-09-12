@@ -12,10 +12,11 @@ import java.io.FileOutputStream;
 
 /** Device tests with Android's own instrumentation; no test SDK in the app. */
 public final class SmokeInstrumentation extends Instrumentation {
-    private boolean live;
+    private boolean live, wake;
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         live = arguments != null && "true".equals(arguments.getString("live"));
+        wake = arguments != null && "true".equals(arguments.getString("wake"));
         start();
     }
     @Override public void onStart() {
@@ -23,11 +24,13 @@ public final class SmokeInstrumentation extends Instrumentation {
         try {
             Context context = getTargetContext();
             ClientChecks.run(context);
+            ForecastChecks.run(context);
+            if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();
             settings.follow = false;
             for (int[] size : new int[][]{{130,64}, {240,110}, {400,100}, {180,240}}) {
-                Bitmap bitmap = ChartRenderer.bitmap(size[0], size[1], 3f, settings, Forecast.example(now), now, false);
+                Bitmap bitmap = ChartRenderer.bitmap(size[0], size[1], 3f, settings, Forecast.example(now), now, ForecastState.DATA);
                 check(bitmap.getWidth() > 0 && bitmap.getHeight() > 0, "Empty bitmap");
                 check(bitmap.getAllocationByteCount() <= 1_800_000, "Bitmap exceeds widget budget");
                 check(android.graphics.Color.alpha(bitmap.getPixel(0,0)) == 0, "Default background must be transparent");
@@ -38,27 +41,27 @@ public final class SmokeInstrumentation extends Instrumentation {
                     check(inflated.findViewById(R.id.chart) != null, "RemoteViews inflation failed");
                 });
             }
-            Bitmap preview = ChartRenderer.bitmap(360, 146, 3f, settings, Forecast.example(now), now, false);
+            Bitmap preview = ChartRenderer.bitmap(360, 146, 3f, settings, Forecast.example(now), now, ForecastState.DATA);
             try (FileOutputStream output = new FileOutputStream(new File(context.getFilesDir(), "tested-chart.png"))) {
                 preview.compress(Bitmap.CompressFormat.PNG, 100, output);
             }
             WidgetSettings largeLabels = settings.copy();
             largeLabels.labelSize = 24;
             for (int[] size : new int[][]{{130,64}, {320,100}}) {
-                Bitmap labels = ChartRenderer.bitmap(size[0], size[1], 3f, largeLabels, Forecast.example(now), now, false);
+                Bitmap labels = ChartRenderer.bitmap(size[0], size[1], 3f, largeLabels, Forecast.example(now), now, ForecastState.DATA);
                 check(labels.getAllocationByteCount() <= 1_800_000, "Large labels exceed widget bitmap budget");
                 try (FileOutputStream output = new FileOutputStream(new File(context.getFilesDir(),
                         size[0] == 130 ? "tested-labels-compact.png" : "tested-labels-large.png"))) {
                     labels.compress(Bitmap.CompressFormat.PNG, 100, output);
                 }
             }
-            Bitmap missing = ChartRenderer.bitmap(240, 110, 2f, settings, null, now, false);
+            Bitmap missing = ChartRenderer.bitmap(240, 110, 2f, settings, null, now, ForecastState.LOADING);
             check(missing.getWidth() == 480, "Missing forecast should still render");
             checkRainfallRendering(now);
             WidgetSettings padded = settings.copy();
             padded.paddingLeft = padded.paddingTop = padded.paddingRight = padded.paddingBottom = 48;
             padded.backgroundColor = 0xff163047;
-            Bitmap compact = ChartRenderer.bitmap(130, 64, 3f, padded, Forecast.example(now), now, false);
+            Bitmap compact = ChartRenderer.bitmap(130, 64, 3f, padded, Forecast.example(now), now, ForecastState.DATA);
             check(compact.getPixel(0, 0) == padded.backgroundColor, "Custom background must cover padding");
             int whitePixels = 0;
             for (int y = 0; y < compact.getHeight(); y++)
@@ -66,7 +69,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                     if (compact.getPixel(x, y) == android.graphics.Color.WHITE) whitePixels++;
             check(whitePixels > 100, "Large padding must not erase a compact graph");
             padded.backgroundColor = 0;
-            Bitmap transparent = ChartRenderer.bitmap(130, 64, 2f, padded, null, now, false);
+            Bitmap transparent = ChartRenderer.bitmap(130, 64, 2f, padded, null, now, ForecastState.LOADING);
             check(android.graphics.Color.alpha(transparent.getPixel(0, 0)) == 0, "Transparent background was flattened");
             Activity activity = startActivitySync(new Intent(context, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             waitForIdleSync();
@@ -105,7 +108,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                 network = " Live MET HTTPS fetch, JSON parsing and expiry-cache reuse also passed.";
             }
             results.putString("stream", "\nPassed: four widget sizes, bitmap budget, RemoteViews inflation, missing-data rendering, settings launch and layout capture; padding bounds, custom/transparent backgrounds and colour/padding dialog edits."
-                    + " Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration and private-data exclusion from diagnostics passed." + network + "\n");
+                    + " Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, prompt wake job configuration and private-data exclusion from diagnostics passed." + network + "\n");
             finish(Activity.RESULT_OK, results);
         } catch (Throwable e) {
             results.putString("stream", "\nFAILED: " + android.util.Log.getStackTraceString(e));
@@ -160,7 +163,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                 dryVisible |= dry.getPixel(x, y) == android.graphics.Color.WHITE;
         check(dryVisible, "A dry forecast must remain a visible curve with the axis hidden");
         try (FileOutputStream output = new FileOutputStream(new File(context.getFilesDir(), "tested-curve-only.png"))) {
-            ChartRenderer.bitmap(320, 100, 3f, curveOnly, Forecast.example(now), now, false)
+            ChartRenderer.bitmap(320, 100, 3f, curveOnly, Forecast.example(now), now, ForecastState.DATA)
                     .compress(Bitmap.CompressFormat.PNG, 100, output);
         } catch (java.io.IOException e) { throw new AssertionError(e); }
     }
@@ -197,7 +200,7 @@ public final class SmokeInstrumentation extends Instrumentation {
     private static Bitmap rainBitmap(WidgetSettings settings, long now, double from, double to) {
         Forecast forecast = new Forecast(now, "ok", java.util.Arrays.asList(
                 new Forecast.Point(now, from), new Forecast.Point(now + 5 * Forecast.MINUTE, to)));
-        return ChartRenderer.bitmap(256, 132, 3f, settings, forecast, now, false);
+        return ChartRenderer.bitmap(256, 132, 3f, settings, forecast, now, ForecastState.DATA);
     }
     private static void rainPixel(Bitmap bitmap, double minute, double rate, double ceiling, int colour, String message) {
         // This fixture has a 240 dp wide, 100 dp high plot with its baseline at y=109 dp.

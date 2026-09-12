@@ -12,9 +12,9 @@ import org.json.JSONException;
 
 public final class RainWidgetProvider extends AppWidgetProvider {
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        Updates.enqueue(context);
         for (int id : ids) render(context, id);
         Updates.schedule(context);
-        Updates.enqueue(context);
     }
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
         render(context, id);
@@ -41,7 +41,7 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         ForecastCache.Entry entry = new ForecastCache(context).read(
                 ForecastWindow.coordinateKey(settings.latitude, settings.longitude));
         if (entry == null) return null;
-        try { return entry.forecast(); } catch (JSONException e) { return null; }
+        try { return entry.displayForecast(System.currentTimeMillis()); } catch (JSONException e) { return null; }
     }
     public static void render(Context context, int id) {
         if (id <= 0) return;
@@ -56,18 +56,18 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         int maxWidth = Math.max(minWidth, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth));
         int minHeight = Math.max(64, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110));
         int maxHeight = Math.max(minHeight, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight));
-        boolean warning = !store.error(id).isEmpty();
-        RemoteViews portrait = views(context, id, minWidth, maxHeight, settings, forecast, now, warning);
-        RemoteViews landscape = views(context, id, maxWidth, minHeight, settings, forecast, now, warning);
+        ForecastState state = ForecastState.of(settings, forecast, now, store.issue(id), Updates.pending(context, id));
+        RemoteViews portrait = views(context, id, minWidth, maxHeight, settings, forecast, now, state);
+        RemoteViews landscape = views(context, id, maxWidth, minHeight, settings, forecast, now, state);
         manager.updateAppWidget(id, new RemoteViews(landscape, portrait));
     }
     private static RemoteViews views(Context context, int id, int width, int height,
-                                     WidgetSettings settings, Forecast forecast, long now, boolean warning) {
+                                     WidgetSettings settings, Forecast forecast, long now, ForecastState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.rain_widget);
         Bitmap bitmap = ChartRenderer.bitmap(width, height, context.getResources().getDisplayMetrics().density,
-                settings, forecast, now, warning);
+                settings, forecast, now, state);
         views.setImageViewBitmap(R.id.chart, bitmap);
-        String description = description(settings, forecast, now, warning);
+        String description = description(settings, forecast, now, state);
         views.setContentDescription(R.id.chart, description);
         Intent click = new Intent(context, OpenForecastActivity.class)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -76,10 +76,10 @@ public final class RainWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         return views;
     }
-    static String description(WidgetSettings settings, Forecast forecast, long now, boolean warning) {
+    static String description(WidgetSettings settings, Forecast forecast, long now, ForecastState state) {
+        if (state == ForecastState.LOADING) return "Waiting for precipitation forecast. Open Rainline for refresh status.";
         if (!settings.hasLocation() || settings.locationExpired(now)) return "Location needed. Open Rainline to update your location.";
-        if (forecast == null || !forecast.hasRadar()) return "Precipitation forecast unavailable. Tap to open Yr.";
-        if (forecast.isStale(now)) return "Precipitation forecast is out of date. Tap to open Yr.";
+        if (state == ForecastState.UNAVAILABLE) return "Precipitation forecast unavailable. Open Rainline for details.";
         java.util.List<ForecastWindow.Segment> segments = ForecastWindow.segments(forecast, now);
         if (segments.isEmpty()) return "No current precipitation data. Tap to open Yr.";
         double peak = 0;
@@ -89,6 +89,6 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         axis += settings.showAxis ? " Dotted axis intervals have no data." : " Gaps have no data.";
         return String.format(java.util.Locale.getDefault(),
                 "Two-hour precipitation forecast. Peak %.1f millimetres per hour.%s%s Tap to open Yr.",
-                peak, axis, warning ? " Last refresh failed." : "");
+                peak, axis, forecast.isStale(now) ? " Using stored forecast data." : "");
     }
 }

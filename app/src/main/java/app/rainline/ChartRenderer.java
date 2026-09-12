@@ -11,17 +11,17 @@ public final class ChartRenderer {
     private ChartRenderer() {}
 
     public static Bitmap bitmap(int widthDp, int heightDp, float density,
-                                WidgetSettings settings, Forecast forecast, long now, boolean warning) {
+                                WidgetSettings settings, Forecast forecast, long now, ForecastState state) {
         float scale = Math.min(density, Math.min(900f / widthDp, 500f / heightDp));
         int width = Math.max(1, Math.round(widthDp * scale));
         int height = Math.max(1, Math.round(heightDp * scale));
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        draw(new Canvas(bitmap), width, height, scale, settings, forecast, now, warning);
+        draw(new Canvas(bitmap), width, height, scale, settings, forecast, now, state);
         return bitmap;
     }
 
     public static void draw(Canvas canvas, int width, int height, float dp, WidgetSettings settings,
-                            Forecast forecast, long now, boolean warning) {
+                            Forecast forecast, long now, ForecastState state) {
         canvas.drawColor(settings.backgroundColor);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setStrokeCap(Paint.Cap.ROUND);
@@ -65,8 +65,7 @@ public final class ChartRenderer {
                 canvas.drawLine(x, base, Math.min(right, x + 1.1f * dp), base, p);
         }
 
-        boolean expiredLocation = settings.locationExpired(now);
-        List<ForecastWindow.Segment> segments = ForecastWindow.segments(expiredLocation ? null : forecast, now);
+        List<ForecastWindow.Segment> segments = ForecastWindow.segments(state == ForecastState.DATA ? forecast : null, now);
         p.setColor(Color.WHITE);
         p.setStrokeWidth(.65f * dp);
         if (settings.showAxis) {
@@ -128,13 +127,19 @@ public final class ChartRenderer {
                 canvas.drawLine(x, top, x + 2 * dp, top + 3 * dp, p);
             }
         }
-        if (segments.isEmpty() || warning) {
-            float x = segments.isEmpty() ? (left + right) / 2 : right - 3 * dp;
-            float y = segments.isEmpty() ? (top + base) / 2 : top + 3 * dp;
+        if (state != ForecastState.DATA) {
+            float x = (left + right) / 2;
+            float y = (top + base) / 2;
             p.setColor(Color.WHITE);
             p.setStrokeWidth(.8f * dp);
-            canvas.drawLine(x - 2.5f * dp, y - 2.5f * dp, x + 2.5f * dp, y + 2.5f * dp, p);
-            canvas.drawLine(x - 2.5f * dp, y + 2.5f * dp, x + 2.5f * dp, y - 2.5f * dp, p);
+            if (state == ForecastState.UNAVAILABLE) {
+                canvas.drawLine(x - 2.5f * dp, y - 2.5f * dp, x + 2.5f * dp, y + 2.5f * dp, p);
+                canvas.drawLine(x - 2.5f * dp, y + 2.5f * dp, x + 2.5f * dp, y - 2.5f * dp, p);
+            } else {
+                // An open ring reads as loading without requiring an animation or extra wakeups.
+                p.setStyle(Paint.Style.STROKE);
+                canvas.drawArc(x - 4 * dp, y - 4 * dp, x + 4 * dp, y + 4 * dp, -60, 280, false, p);
+            }
         }
     }
 

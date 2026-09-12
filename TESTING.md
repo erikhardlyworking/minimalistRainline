@@ -1,14 +1,15 @@
 # Testing
 
-Version: 0.1.5. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.6. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
 - Debug APK build and Android lint (no errors; advisory warnings remain for
   pinned build tools, widget previews, drawing allocations and UI localisation).
-- 29 JVM tests: forecast parsing, rates/units, radar status, missing samples,
-  timestamp ordering, exact two-hour clipping, staleness, coordinate
+- 36 JVM tests: forecast parsing, rates/units, radar status, missing samples,
+  timestamp ordering, exact two-hour clipping, retention beyond 20 minutes, partial/dry data within
+  the next 90 minutes, exhausted caches, loading/error precedence, clock mismatches, coordinate
   validation/rounding, settings persistence (including padding and ARGB
   background colour, rainfall scale, highlight controls and time-axis appearance), legacy preference
   defaults, invalid rainfall settings and HTTP retry policy. Transport tests
@@ -17,7 +18,7 @@ without clearing existing widgets or preferences.
 - Device smoke tests on a Samsung SM-S938B running Android 16 / API 36:
   Canvas rendering at 130×64, 240×110, 400×100 and 180×240 dp,
   bitmap memory bounds, RemoteViews inflation, unavailable-data rendering,
-  settings startup and native layout capture. The 0.1.5 checks also cover
+  settings startup and native layout capture. The checks also cover
   transparent defaults at every tested size,
   large padding on a small widget, coloured/transparent bitmap backgrounds,
   hex validation, applying a colour with opacity, and cancelling padding edits.
@@ -34,11 +35,25 @@ without clearing existing widgets or preferences.
   before Expires, 304 validation with exact server validators, clearing the
   warning on 200, and 429 backoff across locations. No user cache is replaced
   by these simulated responses.
+- Native rendering checks cover a 31-minute-old forecast shifted to now,
+  the missing end of the two-hour axis, distinct open-ring/cross indicators,
+  and accessibility descriptions. A labelled rendering of these states was
+  visually inspected.
+- HTTP/cache checks also verify retaining useful samples through a radar-outage
+  response and subsequent 304, preserving the new response validators, stopping
+  fallback display when its samples expire, and clearing it when radar recovers.
+- An opt-in Android 16 / API 36 emulator test creates a temporary widget,
+  puts the emulator to sleep, verifies that no fetch is queued, then wakes and
+  unlocks it using real system events. A refresh is queued without an added
+  delay while the existing cached data remains usable. Test widget and cache
+  are removed afterward.
+  Screen control is explicitly prohibited by this test on physical devices.
 - Diagnostic tests use private sentinel values to check that coordinates,
   place names, raw errors and request URLs never reach the report. The Copy
   button was not pressed by automation, preserving the device clipboard.
-- MET forecast retrieval for central Oslo, JSON parsing and reuse of its
-  unexpired response passed with the updated client.
+- Live MET forecast retrieval for central Oslo, JSON parsing and unexpired
+  response reuse passed in 0.1.5. The 0.1.6 cache changes were checked with
+  isolated simulated responses, without adding live API requests to the tests.
 - Visual inspection of the diagnostic dialog. The time-axis dialog, large
   numbers and curve-only layout were also inspected in 0.1.4.
   Captures come from Android's actual view hierarchy with labelled sample rain.
@@ -59,15 +74,20 @@ without clearing existing widgets or preferences.
 4. Enable optional background location if you want the widget to follow you.
    Check the selected coordinates and forecast status after moving.
 5. Add a second widget with a fixed place and verify independent settings.
-6. With the phone awake, compare the graph after several refresh cycles.
-   Android may postpone updates under power saving or while locked.
+6. Leave the phone asleep for over 20 minutes, then unlock it. Check that the
+   graph advances to now and still shows remaining cached data while refreshing.
+   With no upcoming cached data, expect an open ring until a result arrives;
+   a failed refresh with no usable cache should show ×. Android may postpone
+   wake events and updates under power saving or while the app is suspended.
 7. Check errors in **Forecast status** if coverage or connectivity is missing.
-   A dotted axis interval is unknown, a solid flat forecast is dry, and ×
-   flags unavailable/stale data or a refresh problem.
+   A dotted axis interval is unknown and a solid flat forecast is dry. An open
+   ring means waiting for data; × means data could not be obtained. A usable
+   cached graph remains visible even if the latest refresh fails.
 8. Open **About → Diagnostics**, inspect the summary, and try Copy if you want
    to paste the technical details into a support request.
 
 Launcher-specific pinning, resize/reconfiguration, tap-through and long-running
 background location/battery behaviour still need hands-on testing, including
-resuming from the new locked/asleep fetch gate. Older
-Android versions have been checked with lint, not yet with physical devices.
+wake-up after Android has cached or killed the app process. An emulator test
+with an active app process does not establish delivery latency under Samsung
+power management. Older Android versions have been checked with lint, not yet with physical devices.

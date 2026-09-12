@@ -6,7 +6,8 @@ import java.io.IOException;
 public enum UpdateIssue {
     NONE, UNKNOWN_ERROR, LOCATION_UNAVAILABLE, LOCATION_MISSING, LOCATION_STALE,
     RETRY_DELAY, HTTP_FORBIDDEN, HTTP_THROTTLED, OUTSIDE_COVERAGE, HTTP_ERROR,
-    INVALID_RESPONSE, REDIRECT_ERROR, IO_ERROR, TIMEOUT, DNS_ERROR, TLS_ERROR, API_DEPRECATED;
+    INVALID_RESPONSE, REDIRECT_ERROR, IO_ERROR, TIMEOUT, DNS_ERROR, TLS_ERROR, API_DEPRECATED,
+    FORECAST_UNAVAILABLE;
 
     public Failure failure(String message) { return new Failure(this, message); }
     public static UpdateIssue from(IOException error, UpdateIssue fallback) {

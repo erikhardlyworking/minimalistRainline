@@ -10,8 +10,9 @@ public final class RefreshReceiver extends BroadcastReceiver {
         if (!"app.rainline.TICK".equals(action) && !Intent.ACTION_BOOT_COMPLETED.equals(action)
                 && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action) && !Intent.ACTION_TIME_CHANGED.equals(action)
                 && !Intent.ACTION_TIMEZONE_CHANGED.equals(action)) return;
+        // The alarm already has random jitter. It also recovers missed wake broadcasts.
+        Updates.enqueue(context, true);
         RainWidgetProvider.renderAll(context);
         Updates.schedule(context);
-        Updates.enqueue(context);
     }
 }

@@ -18,7 +18,8 @@ public final class ForecastWindow {
 
     public static List<Segment> segments(Forecast forecast, long now) {
         List<Segment> result = new ArrayList<>();
-        if (forecast == null || !forecast.hasRadar() || forecast.isStale(now)) return result;
+        // Age alone does not invalidate timestamped future samples in the cache.
+        if (forecast == null || !forecast.hasRadar() || forecast.clockAhead(now)) return result;
         for (int i = 1; i < forecast.points.size(); i++) {
             Forecast.Point a = forecast.points.get(i - 1), b = forecast.points.get(i);
             // A missing sample is a real gap, not a dry interval or an invented straight line.
@@ -32,6 +33,13 @@ public final class ForecastWindow {
                     a.rate + (b.rate - a.rate) * (to - a.time) / span));
         }
         return result;
+    }
+
+    /** Any real interval in the next 90 minutes is useful, including a dry interval. */
+    public static boolean hasUpcomingData(Forecast forecast, long now) {
+        for (Segment segment : segments(forecast, now))
+            if (segment.startMinute < Forecast.UPCOMING / (double) Forecast.MINUTE) return true;
+        return false;
     }
 
     public static boolean isCoordinate(double lat, double lon) {

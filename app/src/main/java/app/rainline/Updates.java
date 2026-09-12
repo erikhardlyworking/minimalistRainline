@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.os.PowerManager;
+import android.os.PersistableBundle;
 import android.app.KeyguardManager;
 import java.util.concurrent.ThreadLocalRandom;
 import java.io.IOException;
@@ -19,11 +20,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class Updates {
     static final ExecutorService IO = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean refreshing = new AtomicBoolean();
+    private static volatile int settingsRefreshId = -1;
+    private static final Set<Integer> inFlight = ConcurrentHashMap.newKeySet();
     private static final int PERIODIC_JOB = 1101, IMMEDIATE_JOB = 1102;
+    private static final String REQUESTED_AT = "requestedAt";
     private Updates() {}
 
     public static int[] widgetIds(Context context) {
@@ -53,14 +59,30 @@ public final class Updates {
         } else alarms.cancel(pending);
     }
     public static void enqueue(Context context) {
+        enqueue(context, false);
+    }
+    public static void enqueue(Context context, boolean prompt) {
         if (!canFetchInBackground(context)) return;
         JobScheduler jobs = context.getSystemService(JobScheduler.class);
-        if (jobs.getPendingJob(IMMEDIATE_JOB) == null) {
-            jobs.schedule(new JobInfo.Builder(IMMEDIATE_JOB, new ComponentName(context, RefreshJobService.class))
-                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                    .setMinimumLatency(ThreadLocalRandom.current().nextLong(5_000, 35_001))
-                    .setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build());
-        }
+        if (jobs.getPendingJob(IMMEDIATE_JOB) == null) jobs.schedule(refreshJob(context, prompt));
+    }
+    static JobInfo refreshJob(Context context, boolean prompt) {
+        PersistableBundle extras = new PersistableBundle();
+        extras.putLong(REQUESTED_AT, System.currentTimeMillis());
+        JobInfo.Builder job = new JobInfo.Builder(IMMEDIATE_JOB, new ComponentName(context, RefreshJobService.class))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setExtras(extras)
+                .setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
+        if (!prompt) job.setMinimumLatency(ThreadLocalRandom.current().nextLong(5_000, 35_001));
+        return job.build();
+    }
+    public static boolean pending(Context context, int id) {
+        if (settingsRefreshId == id || inFlight.contains(id)) return true;
+        SettingsStore store = new SettingsStore(context);
+        if (!store.get(id).automatic || !deviceActive(context)) return false;
+        JobInfo queued = context.getSystemService(JobScheduler.class).getPendingJob(IMMEDIATE_JOB);
+        // A completed failure must be shown even while its JobService is finishing.
+        return queued != null && queued.getExtras().getLong(REQUESTED_AT) > store.attemptedAt(id);
     }
     public static Future<?> refreshWidgets(Context context, Runnable completed) {
         Context app = context.getApplicationContext();
@@ -80,14 +102,18 @@ public final class Updates {
     }
     public static void refreshFromSettings(Context context, int id, boolean locate, Runnable completed) {
         if (!refreshing.compareAndSet(false, true)) return;
+        settingsRefreshId = id;
         Context app = context.getApplicationContext();
         IO.execute(() -> {
             try { refreshOne(app, id, true, locate); }
             finally {
+                settingsRefreshId = -1;
                 refreshing.set(false);
+                RainWidgetProvider.render(app, id);
                 new Handler(Looper.getMainLooper()).post(completed);
             }
         });
+        RainWidgetProvider.render(app, id);
     }
     public static boolean busy() { return refreshing.get(); }
 
@@ -108,6 +134,8 @@ public final class Updates {
         WidgetSettings settings = store.get(id);
         long now = System.currentTimeMillis();
         UpdateIssue stage = UpdateIssue.LOCATION_UNAVAILABLE;
+        inFlight.add(id);
+        RainWidgetProvider.render(context, id);
         try {
             if (settings.follow) {
                 WidgetSettings location = LocationAccess.resolve(context, foreground);
@@ -128,13 +156,20 @@ public final class Updates {
             if (!foreground && !deviceActive(context)) return;
             stage = UpdateIssue.IO_ERROR;
             ForecastCache.Entry entry = new MetClient(context).fetch(settings.latitude, settings.longitude);
+            Forecast result;
+            try { result = entry.forecast(); }
+            catch (org.json.JSONException e) { throw UpdateIssue.INVALID_RESPONSE.failure("The stored forecast is unreadable."); }
+            if (!ForecastWindow.hasUpcomingData(result, System.currentTimeMillis()))
+                throw UpdateIssue.FORECAST_UNAVAILABLE.failure("The weather service has no precipitation data for the next 90 minutes at this location.");
             if (settings.sameLocation(store.get(id))) store.status(id,
                     entry.deprecated ? "MET is retiring this API version. Check for a Rainline update." : "",
-                    entry.deprecated ? UpdateIssue.API_DEPRECATED : UpdateIssue.NONE, now);
+                    entry.deprecated ? UpdateIssue.API_DEPRECATED : UpdateIssue.NONE, System.currentTimeMillis());
         } catch (IOException e) {
             if (settings.sameLocation(store.get(id)) || !store.get(id).hasLocation())
-                store.status(id, e.getMessage() == null ? "Couldn't update the forecast." : e.getMessage(), UpdateIssue.from(e, stage), now);
+                store.status(id, e.getMessage() == null ? "Couldn't update the forecast." : e.getMessage(), UpdateIssue.from(e, stage), System.currentTimeMillis());
+        } finally {
+            inFlight.remove(id);
+            RainWidgetProvider.render(context, id);
         }
-        RainWidgetProvider.render(context, id);
     }
 }

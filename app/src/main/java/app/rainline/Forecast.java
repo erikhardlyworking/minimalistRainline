@@ -13,6 +13,7 @@ import java.util.List;
 public final class Forecast {
     public static final long MINUTE = 60_000L;
     public static final long HORIZON = 120 * MINUTE;
+    public static final long UPCOMING = 90 * MINUTE;
     public static final long STALE_AFTER = 20 * MINUTE;
     public final long updatedAt;
     public final String coverage;
@@ -72,8 +73,10 @@ public final class Forecast {
     }
 
     public boolean isStale(long now) {
-        return now - updatedAt > STALE_AFTER || updatedAt - now > 5 * MINUTE;
+        return now - updatedAt > STALE_AFTER || clockAhead(now);
     }
+
+    public boolean clockAhead(long now) { return updatedAt - now > 5 * MINUTE; }
 
     /** Example data is used exclusively in the labelled settings/picker preview. */
     public static Forecast example(long now) {

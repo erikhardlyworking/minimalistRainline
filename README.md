@@ -46,9 +46,17 @@ a fallback. A widget that needs its first/current location opens Rainline setup.
   the curve is capped at the ceiling. This is a visual highlight, not an alert.
 - A solid flat line is a dry forecast. A **dotted interval means missing data**;
   Rainline never extends the last sample or treats missing rainfall as zero.
-- **×** indicates stale/missing data, a location problem or an update error.
+- Stored forecasts stay visible while any valid interval overlaps the next
+  **90 minutes**. The axis stays at two hours and follows the current time;
+  past samples drop off and missing future intervals remain empty. There is
+  no fixed 20-minute cutoff.
+- A small **open ring** means waiting for data when no usable forecast remains.
+  **×** means data could not be obtained, including location or radar problems.
+  A failed refresh does not add an error marker over a usable cached graph.
   Open Rainline's forecast status for details.
-- Forecasts more than 20 minutes old are hidden at the next redraw.
+- If MET reports a radar outage, the cache retains the previous useful forecast
+  separately from the new HTTP response and its validators. The retained
+  forecast is used only while its timestamped samples still apply.
 - The settings preview uses clearly labelled sample rain until live data is
   available. The actual home-screen widget never shows sample weather.
 
@@ -107,8 +115,8 @@ request URLs and raw exception messages are excluded.
 ## Updates and battery
 
 Rainline combines a best-effort five-to-six-minute **non-wakeup, inexact alarm** with
-a network-constrained **15-minute JobScheduler job**. Alarms redraw cached data
-against the current time and request a weather job. Both respect Android's
+a network-constrained **15-minute JobScheduler job**. Alarms first request a
+weather job, then redraw cached data against the current time without waiting for the network. Both respect Android's
 background scheduling. There are no exact alarms, foreground services,
 persistent notifications or battery-optimization exemptions.
 
@@ -118,6 +126,15 @@ use cached data. Random delays spread scheduled requests across installations.
 The gate checks device activity, not whether the launcher is currently showing
 the widget. An already running request can finish after the screen locks.
 
+A runtime listener requests a refresh promptly on screen-on or unlock, without
+the routine job's extra random delay, then immediately redraws the cached graph.
+While the process is running and the phone is awake and unlocked, minute
+broadcasts also advance the graph without requesting weather.
+Android can defer [screen broadcasts](https://developer.android.com/develop/background-work/background-tasks/broadcasts#android_14)
+in a cached process; listeners also stop when the process is killed. The
+existing alarm, periodic job and widget callbacks remain as recovery paths.
+An instant refresh on every unlock is therefore not guaranteed.
+
 Actual intervals can be longer under Doze, power saving, launcher suspension
 or manufacturer restrictions. A bitmap already held by a suspended launcher
 cannot age itself: an old graph may remain visible until Android permits the
@@ -125,7 +142,8 @@ next redraw. The settings screen shows the forecast issue time and last
 successful server check. Opening the app and **Refresh now** request an update.
 
 Automatic updates can be disabled. Cached graphs still redraw on the inexact
-alarm so their time axis and stale state can advance when Android allows it.
+alarm and delivered minute/wake events so their time axis can advance when
+Android allows it.
 
 Requests use MET's **Expires**, **If-Modified-Since** and **ETag** headers, including
 manual refreshes. Coordinates are rounded to four decimals. There is backoff
@@ -173,7 +191,7 @@ cache. This sends a request from the test device to MET Norway.
 
 Unit tests cover live API field names and units, missing and negative rates,
 radar availability, malformed timestamps, forecast clipping/interpolation,
-staleness, coordinates, settings persistence, redirects, compression and HTTP
+cached forecast time windows, loading/error states, coordinates, settings persistence, redirects, compression and HTTP
 retry policy. Device checks also exercise cache revalidation, deprecation,
 shared throttling and exclusion of private fields from diagnostics.
 
@@ -196,7 +214,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.5 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.6 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 

@@ -4,5 +4,5 @@
     <ImageView android:id="@+id/chart" android:layout_width="match_parent"
         android:layout_height="match_parent" android:scaleType="fitXY"
         android:contentDescription="@string/widget_loading"
-        android:src="@drawable/widget_unavailable" />
+        android:src="@drawable/widget_loading" />
 </FrameLayout>

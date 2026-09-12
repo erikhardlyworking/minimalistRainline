@@ -11,10 +11,18 @@ import java.nio.charset.StandardCharsets;
 
 public final class ForecastCache {
     public static final class Entry {
-        public String body, lastModified = "", etag = "";
+        public String body, retainedBody = "", lastModified = "", etag = "";
         public long expiresAt, checkedAt, retryAt;
         public boolean deprecated;
         public Forecast forecast() throws JSONException { return Forecast.parse(body); }
+        public String displayBody(long now) throws JSONException {
+            if (ForecastWindow.hasUpcomingData(forecast(), now) || retainedBody.isEmpty()) return body;
+            try {
+                if (ForecastWindow.hasUpcomingData(Forecast.parse(retainedBody), now)) return retainedBody;
+            } catch (JSONException ignored) { /* A damaged fallback must not hide a valid API response. */ }
+            return body;
+        }
+        public Forecast displayForecast(long now) throws JSONException { return Forecast.parse(displayBody(now)); }
     }
     private final File directory;
     public ForecastCache(Context context) {
@@ -30,6 +38,7 @@ public final class ForecastCache {
             JSONObject o = new JSONObject(new String(file(key).readFully(), StandardCharsets.UTF_8));
             Entry e = new Entry();
             e.body = o.getString("body");
+            e.retainedBody = o.optString("retainedBody");
             e.expiresAt = o.optLong("expiresAt");
             e.checkedAt = o.optLong("checkedAt");
             e.retryAt = o.optLong("retryAt");
@@ -47,6 +56,7 @@ public final class ForecastCache {
         try {
             JSONObject o = new JSONObject();
             o.put("body", e.body).put("expiresAt", e.expiresAt).put("checkedAt", e.checkedAt);
+            o.put("retainedBody", e.retainedBody);
             o.put("retryAt", e.retryAt).put("lastModified", e.lastModified).put("etag", e.etag);
             o.put("deprecated", e.deprecated);
             stream = target.startWrite();

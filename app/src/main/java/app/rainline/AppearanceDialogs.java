@@ -371,7 +371,7 @@ public final class AppearanceDialogs {
                     sample.scaleMax = 3f;
                     sample.highlightThreshold = 2.5f;
                 }
-                ChartRenderer.draw(canvas, getWidth(), getHeight(), density, sample, Forecast.example(now), now, false);
+                ChartRenderer.draw(canvas, getWidth(), getHeight(), density, sample, Forecast.example(now), now, ForecastState.DATA);
             }
         };
     }

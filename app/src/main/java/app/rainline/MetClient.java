@@ -57,7 +57,12 @@ public final class MetClient {
             ForecastCache.Entry entry = new ForecastCache.Entry();
             entry.body = MetHttp.body(connection);
             entry.deprecated = code == 203;
-            try { entry.forecast(); }
+            try {
+                Forecast received = entry.forecast();
+                if (!ForecastWindow.hasUpcomingData(received, now) && old != null
+                        && ForecastWindow.hasUpcomingData(old.displayForecast(now), now))
+                    entry.retainedBody = old.displayBody(now);
+            }
             catch (JSONException e) { throw UpdateIssue.INVALID_RESPONSE.failure("The weather service returned an unreadable forecast."); }
             entry.expiresAt = expiry(connection, now);
             entry.checkedAt = now;

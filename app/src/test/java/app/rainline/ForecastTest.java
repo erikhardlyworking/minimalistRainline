@@ -87,12 +87,29 @@ public class ForecastTest {
                 new Forecast.Point(now + 20 * Forecast.MINUTE, 0)));
         assertTrue(ForecastWindow.segments(f, now).isEmpty());
     }
-    @Test public void forecastHidesWhenStaleOrClockIsFarBehind() {
+    @Test public void oldForecastRetainsFutureSamplesAtTheirCorrectTimes() {
         Forecast f = Forecast.example(now);
         assertFalse(f.isStale(now + 20 * Forecast.MINUTE));
         assertTrue(f.isStale(now + 20 * Forecast.MINUTE + 1));
-        assertTrue(ForecastWindow.segments(f, now + 21 * Forecast.MINUTE).isEmpty());
+        List<ForecastWindow.Segment> segments = ForecastWindow.segments(f, now + 31 * Forecast.MINUTE);
+        assertEquals(0, segments.get(0).startMinute, 0);
+        assertEquals(4, segments.get(0).endMinute, 0);
+        assertEquals(1.18, segments.get(0).startRate, .0001);
+        assertEquals(89, segments.get(segments.size() - 1).endMinute, 0);
+        assertTrue(ForecastWindow.hasUpcomingData(f, now + 100 * Forecast.MINUTE));
+        assertFalse(ForecastWindow.hasUpcomingData(f, now + 120 * Forecast.MINUTE));
+    }
+    @Test public void clockFarBehindStillRejectsFutureIssuedForecast() {
+        Forecast f = Forecast.example(now);
         assertTrue(ForecastWindow.segments(f, now - 6 * Forecast.MINUTE).isEmpty());
+    }
+    @Test public void upcomingWindowRequiresSomeDataBeforeNinetyMinutes() {
+        Forecast later = new Forecast(now, "ok", Arrays.asList(
+                new Forecast.Point(now + 90 * Forecast.MINUTE, 0),
+                new Forecast.Point(now + 95 * Forecast.MINUTE, 0)));
+        assertFalse(ForecastWindow.hasUpcomingData(later, now));
+        // Even a partly overlapping dry interval is useful; no full 90-minute coverage is required.
+        assertTrue(ForecastWindow.hasUpcomingData(later, now + Forecast.MINUTE));
     }
     @Test public void samplesBeforeNowAreExcluded() {
         Forecast f = new Forecast(now, "ok", Arrays.asList(

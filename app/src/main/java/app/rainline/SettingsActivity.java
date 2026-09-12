@@ -154,8 +154,8 @@ public final class SettingsActivity extends Activity {
             row("Editing", widgetId == 0 ? "Defaults for new widgets" : widgetLabel(widgetId), this::chooseWidget);
             space(12);
         }
-        boolean live = forecast != null && !forecast.isStale(System.currentTimeMillis())
-                && forecast.hasRadar() && !settings.locationExpired(System.currentTimeMillis());
+        boolean live = ForecastWindow.hasUpcomingData(forecast, System.currentTimeMillis())
+                && !settings.locationExpired(System.currentTimeMillis());
         TextView previewLabel = text(live ? "YOUR FORECAST · NEXT TWO HOURS" : "APPEARANCE PREVIEW · SAMPLE RAIN", 10);
         previewLabel.setLetterSpacing(.10f);
         content.addView(previewLabel);
@@ -164,18 +164,18 @@ public final class SettingsActivity extends Activity {
                 long now = System.currentTimeMillis();
                 WidgetSettings appearance = store.get(widgetId);
                 Forecast current = RainWidgetProvider.forecast(SettingsActivity.this, appearance);
-                boolean currentIsLive = current != null && !current.isStale(now) && current.hasRadar()
+                boolean currentIsLive = ForecastWindow.hasUpcomingData(current, now)
                         && !appearance.locationExpired(now);
                 if (!currentIsLive) {
                     current = Forecast.example(now);
                     appearance.follow = false; // Preview has no dependency on location permission.
                 }
                 ChartRenderer.draw(canvas, getWidth(), getHeight(), getResources().getDisplayMetrics().density,
-                        appearance, current, now, false);
+                        appearance, current, now, ForecastState.DATA);
             }
         };
         preview.setContentDescription(live ? RainWidgetProvider.description(settings, forecast,
-                System.currentTimeMillis(), false) : "Sample precipitation graph. Appearance preview only.");
+                System.currentTimeMillis(), ForecastState.DATA) : "Sample precipitation graph. Appearance preview only.");
         content.addView(preview, new LinearLayout.LayoutParams(-1, dp(146)));
         small("30 · 60 · 90 minutes  /  small ticks every 5 minutes");
         space(20);
@@ -248,12 +248,12 @@ public final class SettingsActivity extends Activity {
         });
         row("Forecast status", status(settings, forecast), () -> new AlertDialog.Builder(this)
                 .setTitle("Forecast status").setMessage(status(settings, forecast)
-                        + "\n\nA dotted part of the axis has no forecast data. × means the forecast needs attention. Open Rainline for details."
-                        + "\n\nForecasts older than 20 minutes are hidden when the widget next redraws.")
+                        + "\n\nA dotted part of the axis has no forecast data. An open ring means waiting for data; × means data could not be obtained."
+                        + "\n\nStored forecasts stay visible while they contain any valid intervals in the next 90 minutes. The two-hour axis advances with the current time, leaving missing intervals empty.")
                 .setPositiveButton("OK", null).show());
         Button refresh = button(Updates.busy() ? "Updating…" : "Refresh now", () -> refresh(false), false);
         refresh.setEnabled(!Updates.busy());
-        small("Refreshes aim for about 5–6 minutes while the phone is awake and unlocked, with a 15-minute fallback. Android may delay updates. Locked or sleeping phones use cached data. Rainline honours the weather service’s cache even when you refresh manually.");
+        small("Rainline requests a refresh on wake or unlock and immediately realigns the cached graph. Regular refreshes aim for about 5–6 minutes while awake and unlocked, with a 15-minute fallback. Android may delay wake events and updates. Rainline honours the weather service’s cache even when you refresh manually.");
 
         section("About");
         row("Weather data", "MET Norway · CC BY 4.0", () -> new AlertDialog.Builder(this)
@@ -303,7 +303,8 @@ public final class SettingsActivity extends Activity {
         else if ("no coverage".equals(forecast.coverage)) details = "No radar coverage at this location";
         else if ("temporarily unavailable".equals(forecast.coverage)) details = "Radar temporarily unavailable";
         else if (!forecast.hasRadar()) details = "Precipitation data unavailable";
-        else if (forecast.isStale(System.currentTimeMillis())) details = "Forecast is out of date";
+        else if (!ForecastWindow.hasUpcomingData(forecast, System.currentTimeMillis())) details = "Waiting for data for the next 90 minutes";
+        else if (forecast.isStale(System.currentTimeMillis())) details = "Showing stored forecast at the current time";
         else details = "Radar coverage available";
         if (forecast != null) details += "\nForecast issued " + time(forecast.updatedAt);
         if (settings.hasLocation()) {
@@ -313,6 +314,7 @@ public final class SettingsActivity extends Activity {
                 details += "\nMET is retiring this API version. Check for a Rainline update.";
         }
         if (!error.isEmpty()) details += "\n" + error;
+        if (Updates.pending(this, widgetId)) details += "\nRefresh requested";
         return details;
     }
     private String time(long timestamp) {

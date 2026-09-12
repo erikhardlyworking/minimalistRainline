@@ -67,6 +67,36 @@ final class ClientChecks {
             catch (UpdateIssue.Failure e) { check(e.issue == UpdateIssue.RETRY_DELAY, "Global retry wait not classified"); }
             check(calls.get() == 4, "Changing locations must not bypass service-wide throttling");
 
+            // Keep the last useful forecast when a later successful response reports a radar outage.
+            context.deleteSharedPreferences("client-checks-http-backoff");
+            AtomicInteger outageCalls = new AtomicInteger();
+            MetClient outageClient = new MetClient(isolated, url -> {
+                FakeConnection response = new FakeConnection(url, outageCalls.getAndIncrement() == 0 ? 200 : 304,
+                        "{\"properties\":{\"meta\":{\"updated_at\":\"" + Instant.ofEpochMilli(now)
+                                + "\",\"radar_coverage\":\"temporarily unavailable\"},\"timeseries\":[]}}");
+                response.headers.put("Last-Modified", "outage-validator");
+                return response;
+            });
+            entry.expiresAt = now - 1;
+            cache.write(key, entry);
+            ForecastCache.Entry outage = outageClient.fetch(60, 10);
+            check(!outage.forecast().hasRadar(), "Cache validators must still describe the outage response");
+            check(ForecastWindow.hasUpcomingData(cache.read(key).displayForecast(now + Forecast.MINUTE), now + Forecast.MINUTE),
+                    "A radar outage erased useful cached samples");
+            check(!ForecastWindow.hasUpcomingData(outage.displayForecast(now + 6 * Forecast.MINUTE), now + 6 * Forecast.MINUTE),
+                    "Retained data must expire by its sample timestamps");
+            outage.expiresAt = now - 1;
+            cache.write(key, outage);
+            outage = outageClient.fetch(60, 10);
+            check(outage.retainedBody.equals(json), "304 must retain the last useful forecast");
+            check(outage.lastModified.equals("outage-validator"), "Retained weather must not replace HTTP validators");
+
+            MetClient recovered = new MetClient(isolated, url -> new FakeConnection(url, 200, json));
+            outage.expiresAt = now - 1;
+            cache.write(key, outage);
+            entry = recovered.fetch(60, 10);
+            check(entry.retainedBody.isEmpty(), "Recovery must replace the temporary fallback");
+
             WidgetSettings settings = new WidgetSettings();
             settings.follow = false;
             settings.latitude = 59.1234; settings.longitude = 10.9876;

@@ -94,6 +94,7 @@ public final class Diagnostics {
         line(out, "Location stale", settings.follow && settings.locationExpired(now));
         if (settings.follow) line(out, "Location age", age(settings.locationAt, now));
         line(out, "Automatic updates", settings.automatic);
+        line(out, "Refresh pending", Updates.pending(context, widgetId));
         line(out, "Last update attempt", age(attemptedAt, now));
         line(out, "Last update category", issue.name().toLowerCase(Locale.ROOT));
         line(out, "Cached forecast", entry != null);
@@ -104,9 +105,13 @@ public final class Diagnostics {
             try {
                 Forecast forecast = entry.forecast();
                 line(out, "Forecast age", age(forecast.updatedAt, now));
-                line(out, "Forecast stale", forecast.isStale(now));
+                line(out, "Forecast older than 20 min", now - forecast.updatedAt > Forecast.STALE_AFTER);
                 line(out, "Radar data available", forecast.hasRadar());
-                line(out, "Usable forecast intervals", ForecastWindow.segments(forecast, now).size());
+                Forecast display = entry.displayForecast(now);
+                line(out, "Displayed forecast age", age(display.updatedAt, now));
+                line(out, "Data within next 90 min", ForecastWindow.hasUpcomingData(display, now));
+                line(out, "Usable forecast intervals", ForecastWindow.segments(display, now).size());
+                line(out, "Widget state", ForecastState.of(settings, display, now, issue, Updates.pending(context, widgetId)));
             } catch (org.json.JSONException e) { line(out, "Forecast state", "unreadable"); }
         }
         line(out, "Axis / ticks / numbers", settings.showAxis + " / " + settings.showTicks + " / " + settings.labels);
