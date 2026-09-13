@@ -30,7 +30,11 @@ public final class Diagnostics {
     private Diagnostics() {}
 
     public static AlertDialog show(Activity activity, int widgetId) {
-        String report = summary(activity, widgetId);
+        return show(activity, widgetId, "");
+    }
+    public static AlertDialog show(Activity activity, int widgetId, String beforeRefresh) {
+        String report = summary(activity, widgetId) + (beforeRefresh.isEmpty() ? ""
+                : "\nWidget before this settings refresh (ages at that time)\n" + beforeRefresh + "\n");
         TextView text = new TextView(activity);
         text.setText(report);
         text.setTextColor(Color.WHITE);
@@ -72,6 +76,7 @@ public final class Diagnostics {
         line(out, "Placed widgets", Updates.widgetIds(context).length);
         line(out, "Selection", widgetId > 0 ? "placed widget" : "defaults");
         if (widgetId > 0) {
+            out.append(UpdateDiagnostics.widgetSnapshot(context, widgetId)).append('\n');
             Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
             line(out, "Widget size bounds (dp)", options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) + "–"
                     + options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) + " wide, "

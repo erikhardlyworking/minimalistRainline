@@ -24,7 +24,10 @@ Requires Android 8.0 or newer.
    support also expose its settings. Settings are always available in the app.
 
 To follow your location from the home screen, open **Background location** in
-Rainline and choose **Allow all the time** in Android's permissions. This is
+Rainline, tap **Continue**, and choose **Allow all the time** on Android's Location
+permission screen. Background access is an option inside **Location**, not a
+separate entry in the permissions list. If Android suppresses the request, use
+**App settings → Permissions → Location → Allow all the time**. This is
 optional. Without it, the app uses the position last obtained while open;
 after two hours it requires a new fix. A fixed place needs no location permission.
 **Background location** explicitly shows **Status: enabled** or **Status:
@@ -116,7 +119,11 @@ Apply commits an appearance edit; Cancel leaves the widget untouched.
 versions, device model, widget dimensions, permissions, power/network state,
 forecast age and fixed update-error categories. It also shows the latest wake
 event and job timestamps, expedited scheduling outcomes and Android's reasons
-for delaying a job. Copy puts the displayed summary
+for delaying a job. For each widget it records the latest graph submitted to
+the launcher, its time origin, forecast issue time and state. A snapshot taken
+before the settings screen's own refresh is included, with ages as recorded
+at that time. Submission does not confirm that a launcher has painted the image.
+Copy puts the displayed summary
 on the clipboard; the app never sends it. Coordinates, place names, device IDs,
 request URLs and raw exception messages are excluded.
 
@@ -141,6 +148,8 @@ or expedited work is left alone. If expedited quota is exhausted, an ordinary
 job is scheduled without an added delay. Older Android versions use ordinary
 jobs. Valid HTTP cache entries and retry delays avoid unnecessary wake jobs
 when the location is configured and recent.
+The receiver accepts protected unlock broadcasts from System UI's separate
+UID; version 0.1.7 incorrectly rejected those events on phones such as Samsung.
 While the process is running and the phone is awake and unlocked, minute
 broadcasts also advance the graph without requesting weather.
 Android can defer [screen broadcasts](https://developer.android.com/develop/background-work/background-tasks/broadcasts#android_14)
@@ -229,7 +238,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.7 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.8 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 

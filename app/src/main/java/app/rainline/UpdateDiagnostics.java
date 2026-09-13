@@ -27,6 +27,23 @@ public final class UpdateDiagnostics {
         prefs(context).edit().putLong("stopped", System.currentTimeMillis()).putInt("stopReason", reason).apply();
     }
     static long at(Context context, String key) { return prefs(context).getLong(key, 0); }
+    static void rendered(Context context, int id, long graphAt, long forecastAt, ForecastState state) {
+        prefs(context).edit().putLong("rendered." + id, System.currentTimeMillis())
+                .putLong("graphAt." + id, graphAt).putLong("forecastAt." + id, forecastAt)
+                .putString("renderState." + id, state.name()).apply();
+    }
+    static String widgetSnapshot(Context context, int id) {
+        SharedPreferences p = prefs(context);
+        long now = System.currentTimeMillis();
+        return "Graph submitted to launcher: " + ForecastTimes.describe(p.getLong("rendered." + id, 0), now)
+                + "\nGraph time origin: " + ForecastTimes.describe(p.getLong("graphAt." + id, 0), now)
+                + "\nSubmitted forecast issued: " + ForecastTimes.describe(p.getLong("forecastAt." + id, 0), now)
+                + "\nSubmitted graph state: " + p.getString("renderState." + id, "unknown");
+    }
+    static void deleteWidget(Context context, int id) {
+        prefs(context).edit().remove("rendered." + id).remove("graphAt." + id)
+                .remove("forecastAt." + id).remove("renderState." + id).apply();
+    }
     static String outcome(Context context) { return prefs(context).getString("scheduleOutcome", "none"); }
     static String lastStop(Context context) {
         if (Build.VERSION.SDK_INT < 31) return "not available on this Android version";

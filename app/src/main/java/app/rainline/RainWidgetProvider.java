@@ -21,7 +21,10 @@ public final class RainWidgetProvider extends AppWidgetProvider {
     }
     @Override public void onDeleted(Context context, int[] ids) {
         SettingsStore store = new SettingsStore(context);
-        for (int id : ids) store.delete(id);
+        for (int id : ids) {
+            store.delete(id);
+            UpdateDiagnostics.deleteWidget(context, id);
+        }
         Updates.schedule(context);
     }
     @Override public void onDisabled(Context context) { Updates.schedule(context); }
@@ -30,6 +33,7 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         for (int i = 0; i < Math.min(oldIds.length, newIds.length); i++) {
             store.put(newIds[i], store.get(oldIds[i]));
             store.delete(oldIds[i]);
+            UpdateDiagnostics.deleteWidget(context, oldIds[i]);
         }
         onUpdate(context, AppWidgetManager.getInstance(context), newIds);
     }
@@ -43,7 +47,9 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         if (entry == null) return null;
         try { return entry.displayForecast(System.currentTimeMillis()); } catch (JSONException e) { return null; }
     }
-    public static void render(Context context, int id) {
+    // Receivers/settings and the fetch worker may render concurrently. Serialize
+    // snapshot + submission so an older bitmap cannot overwrite a newer result.
+    public static synchronized void render(Context context, int id) {
         if (id <= 0) return;
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         if (manager.getAppWidgetInfo(id) == null) return;
@@ -60,6 +66,7 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         RemoteViews portrait = views(context, id, minWidth, maxHeight, settings, forecast, now, state);
         RemoteViews landscape = views(context, id, maxWidth, minHeight, settings, forecast, now, state);
         manager.updateAppWidget(id, new RemoteViews(landscape, portrait));
+        UpdateDiagnostics.rendered(context, id, now, forecast == null ? 0 : forecast.updatedAt, state);
     }
     private static RemoteViews views(Context context, int id, int width, int height,
                                      WidgetSettings settings, Forecast forecast, long now, ForecastState state) {

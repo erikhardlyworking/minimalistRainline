@@ -1,6 +1,6 @@
 # Background refresh investigation
 
-Reviewed 13 September 2026 for Rainline 0.1.7.
+Reviewed 13 September 2026 for Rainline 0.1.8.
 
 A graph becoming shorter proves that the cached bitmap was redrawn against
 the current time. It does not prove that Android started a weather job, that
@@ -9,6 +9,45 @@ Opening the settings activity makes the process active and can obtain a fresh
 foreground location, so it can recover from several different problems.
 
 ## Findings
+
+The 0.1.8 investigation found an application bug in addition to the platform
+limits below. The runtime receiver used `RECEIVER_NOT_EXPORTED`. That accepts
+screen-on from the system UID, but rejects unlock broadcasts sent by System UI
+under its own UID. The connected Samsung uses a separate System UI UID, and
+Rainline's diagnostics recorded screen-on but no unlock events. Screen-on can
+arrive while the lock screen is still showing; the activity gate correctly
+rejects a fetch then, but the subsequent unlock never reached the app.
+
+The receiver now uses `RECEIVER_EXPORTED` for its protected Android actions.
+Ordinary apps cannot send these protected broadcasts. This follows Android's
+[guidance for system broadcasts from privileged apps with separate UIDs](https://developer.android.com/develop/background-work/background-tasks/broadcasts#context-registered-receivers).
+[System UI's keyguard code](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SystemUI/src/com/android/systemui/keyguard/KeyguardViewMediator.java)
+shows where the unlock broadcast originates. Exporting the runtime receiver
+fixes sender rejection; it does not make a killed process receive broadcasts.
+
+The previous emulator test had the lock screen disabled and accepted either
+screen-on or unlock. It therefore missed this defect. The revised test enables
+the emulator's swipe lock screen temporarily and requires `USER_PRESENT`.
+It registers a second receiver using the old flag to compare both registrations
+against the same event. It also listens through an `AppWidgetHost`, without
+opening settings, and checks that fetched data is submitted to the host.
+
+The background-location setup also incorrectly skipped the runtime request on
+Android 11+. It now requests background access separately after foreground
+access, allowing PermissionController to show the location-specific page.
+The explanation uses Android's localized option label and spells out the
+fallback path: App settings → Permissions → Location → Allow all the time.
+Background access is an option inside the Location permission group. See
+[incremental location requests](https://developer.android.com/develop/sensors-and-location/location/permissions/runtime#request-only-foreground)
+and [background-location guidance](https://developer.android.com/develop/sensors-and-location/location/permissions/background).
+
+Widget snapshot creation and submission are serialized so a concurrent render
+cannot submit an older snapshot after a newer one. Local diagnostics now store
+the latest submitted graph's time origin, forecast issue time and state for
+each widget. The settings screen also captures those values before its own
+refresh, so opening settings does not erase that diagnostic comparison.
+A successful `updateAppWidget` call establishes submission to Android, not
+proof that a particular launcher has painted the image on screen.
 
 1. **Screen-on is not a reliable process wake-up mechanism.** Android 14 and
    later may defer `ACTION_SCREEN_ON` while an app process is cached. A runtime
@@ -35,7 +74,7 @@ foreground location, so it can recover from several different problems.
    expires the cache, performs another sleep/wake cycle, and waits for both
    the server-check timestamp and completed update result to change.
 
-## Approach used in 0.1.7
+## Scheduling approach retained from 0.1.7
 
 - Preserve usable cached data and realign the graph on delivered wake and
   minute events. Repainting does not request weather on every minute tick.

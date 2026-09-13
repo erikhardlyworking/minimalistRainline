@@ -21,7 +21,11 @@ public final class RainlineApplication extends Application {
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_USER_PRESENT);
         filter.addAction(Intent.ACTION_TIME_TICK);
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenEvents, filter, Context.RECEIVER_NOT_EXPORTED);
+        // USER_PRESENT comes from System UI, which has its own UID on e.g. Samsung.
+        // NOT_EXPORTED accepts SCREEN_ON from system_server but drops that unlock event.
+        // Every action in this filter is a protected Android broadcast: ordinary apps
+        // cannot send one, even though this receiver must accept external senders.
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenEvents, filter, Context.RECEIVER_EXPORTED);
         else registerReceiver(screenEvents, filter);
     }
 

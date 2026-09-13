@@ -1,6 +1,6 @@
 # Testing
 
-Version: 0.1.7. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.8. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
@@ -42,12 +42,18 @@ without clearing existing widgets or preferences.
 - HTTP/cache checks also verify retaining useful samples through a radar-outage
   response and subsequent 304, preserving the new response validators, stopping
   fallback display when its samples expire, and clearing it when radar recovers.
-- An opt-in Android 16 / API 36 emulator test creates a temporary widget,
-  verifies that sleep blocks new jobs and that an unexpired cache consumes no
-  wake-job quota, then expires the cache for a second sleep/wake cycle. It waits
-  for an actual MET fetch at the public Oslo test location to complete and
-  verifies the server-check timestamp, completed attempt and returned samples.
-  This passed in 0.1.7. Test widget and cache are removed/restored afterward.
+- An opt-in Android 16 / API 36 emulator test creates a temporary widget and
+  temporarily enables a swipe lock screen. It requires a real System UI unlock
+  event, verifies that the former `NOT_EXPORTED` registration misses the same
+  event, and checks that the corrected receiver submits an aligned graph.
+  A fresh cache consumes no wake-job quota. After a second sleep/wake cycle with
+  an expired cache, it checks a completed MET fetch at the public Oslo test
+  location, the submitted forecast timestamp and delivery to an AppWidgetHost
+  without opening settings. This passed in 0.1.8. An initial run timed out on
+  the live fetch; a rerun with expanded failure diagnostics passed. The initial
+  fetch failure's cause was not captured. Test widget/cache and the emulator's
+  lock-screen setting are removed/restored afterward. The earlier 0.1.7 test
+  had the lock screen disabled and therefore missed the unlock receiver bug.
   Screen control is explicitly prohibited by this test on physical devices.
 - Simulated scheduler checks verify expedited-quota rejection with an immediate
   regular fallback, promotion of a queued ordinary job, deduplication of repeated
@@ -83,7 +89,10 @@ without clearing existing widgets or preferences.
 3. Tap the placed widget and check that its settings open. Check the forecast
    update/check timestamps and elapsed ages below the graph, then tap **Open Yr**.
 4. In follow mode, check **Background location → Status: enabled/disabled**.
-   Enable it if you want following to continue after two hours away from the
+   Tap Continue and choose **Allow all the time** on Android's Location page.
+   Background access is inside the Location permission group, not a separate
+   permission in the list. The fallback path is **App settings → Permissions →
+   Location → Allow all the time**. Enable it if you want following to continue after two hours away from the
    app; alternatively choose a fixed place. Check the selected coordinates and
    forecast status after moving.
 5. Add a second widget with a fixed place and verify independent settings.
@@ -99,7 +108,9 @@ without clearing existing widgets or preferences.
 8. Open **About → Diagnostics**, inspect the summary, and try Copy if you want
    to paste the technical details into a support request. For wake problems,
    compare the latest received wake, job start/completion, pending reason and
-   last update category.
+   last update category. Compare the graph submission time and forecast issue
+   time too. The report includes a snapshot from before settings performed its
+   own refresh, so that refresh does not mask the previous submission state.
 
 Launcher-specific pinning, resize/reconfiguration, tap-through and long-running
 background location/battery behaviour still need hands-on testing, including

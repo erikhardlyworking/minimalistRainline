@@ -49,7 +49,10 @@ It includes app/Android versions, device model, widget dimensions, permission
 and power/network states, forecast ages and fixed error categories. Rainline
 also keeps the latest received wake-event and job timestamps and fixed
 scheduling/stop categories locally, replacing earlier values rather than
-building an event history. The summary includes those fields and Android's
+building an event history. For each widget it keeps the latest graph submission
+time, graph time origin, forecast issue time and display-state category. Settings
+temporarily retain a snapshot of those fields from before their own refresh.
+The summary includes those fields and Android's
 reported job-delay reasons. It excludes
 coordinates, place names, device IDs, request URLs and raw exception messages.
 Rainline does not upload the report or retain a report history. Pressing Copy

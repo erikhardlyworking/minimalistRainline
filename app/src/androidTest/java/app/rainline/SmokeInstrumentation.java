@@ -12,17 +12,24 @@ import java.io.FileOutputStream;
 
 /** Device tests with Android's own instrumentation; no test SDK in the app. */
 public final class SmokeInstrumentation extends Instrumentation {
-    private boolean live, wake;
+    private boolean live, wake, wakeOnly;
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         live = arguments != null && "true".equals(arguments.getString("live"));
         wake = arguments != null && "true".equals(arguments.getString("wake"));
+        wakeOnly = arguments != null && "true".equals(arguments.getString("wakeOnly"));
         start();
     }
     @Override public void onStart() {
         Bundle results = new Bundle();
         try {
             Context context = getTargetContext();
+            if (wakeOnly) {
+                WakeChecks.run(this, context);
+                results.putString("result", "Unlock, cache refresh and widget host delivery passed");
+                finish(Activity.RESULT_OK, results);
+                return;
+            }
             ClientChecks.run(context);
             ForecastChecks.run(context);
             SchedulingChecks.run(context);

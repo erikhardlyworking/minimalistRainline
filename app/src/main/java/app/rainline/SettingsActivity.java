@@ -49,6 +49,7 @@ public final class SettingsActivity extends Activity {
     private static final int LOCATION_PERMISSION = 20, BACKGROUND_PERMISSION = 21;
     private SettingsStore store;
     private int widgetId;
+    private String widgetBeforeRefresh = "";
     private boolean configuring, wasConfigured, saved;
     private ScrollView scroll;
     private LinearLayout content;
@@ -90,6 +91,7 @@ public final class SettingsActivity extends Activity {
         super.onResume();
         if (store == null || isFinishing()) return;
         resumed = true;
+        widgetBeforeRefresh = widgetId > 0 ? UpdateDiagnostics.widgetSnapshot(this, widgetId) : "";
         showPage();
         RainWidgetProvider.renderAll(this);
         Updates.schedule(this);
@@ -269,7 +271,7 @@ public final class SettingsActivity extends Activity {
                 .setNeutralButton("Licence", (d, which) -> openLink("https://creativecommons.org/licenses/by/4.0/"))
                 .setNegativeButton("Close", null).show());
         row("Privacy", "No ads, analytics or accounts", this::privacy);
-        row("Diagnostics", "Preview and copy a local summary", () -> Diagnostics.show(this, widgetId));
+        row("Diagnostics", "Preview and copy a local summary", () -> Diagnostics.show(this, widgetId, widgetBeforeRefresh));
         row("Open source", "MIT licence · Version " + BuildConfig.VERSION_NAME, this::aboutSource);
         space(24);
         button(configuring ? "Save widget" : "Add widget", configuring ? this::finishConfiguration : this::pinWidget, true);
@@ -291,6 +293,7 @@ public final class SettingsActivity extends Activity {
         labels[ids.length] = "Defaults for new widgets";
         choices("Edit widget", labels, checked, chosen -> {
             widgetId = chosen == ids.length ? 0 : ids[chosen];
+            widgetBeforeRefresh = widgetId > 0 ? UpdateDiagnostics.widgetSnapshot(this, widgetId) : "";
             showPage();
         });
     }
@@ -370,13 +373,18 @@ public final class SettingsActivity extends Activity {
     private void backgroundLocation() {
         if (!LocationAccess.foregroundAllowed(this)) { locate(); return; }
         if (LocationAccess.backgroundAllowed(this)) { appSettings(); return; }
+        String option = Build.VERSION.SDK_INT >= 30
+                ? getPackageManager().getBackgroundPermissionOptionLabel().toString() : "Allow all the time";
         new AlertDialog.Builder(this).setTitle("Follow your location in the background")
-                .setMessage("Rainline uses your location during forecast updates so the widget follows you even when the app is closed.\n\nThe coordinates are sent directly to MET Norway to fetch local weather. Rainline stores the selected location and a small weather cache on this device, with no analytics or tracking service.\n\nChoose “Allow all the time” on the next screen. You can keep using a fixed place without this permission.")
+                .setMessage("Rainline uses your location during forecast updates so the widget follows you even when the app is closed.\n\nThe coordinates are sent directly to MET Norway to fetch local weather. Rainline stores the selected location and a small weather cache on this device, with no analytics or tracking service.\n\nChoose “" + option + "” in Android’s Location permission screen. Background access is an option inside Location, not a separate permission in the list.\n\nIf Android no longer shows a permission request, use App settings → Permissions → Location. You can keep using a fixed place without this permission.")
                 .setPositiveButton("Continue", (d, which) -> {
-                    if (Build.VERSION.SDK_INT == 29)
+                    // Request background access separately, after foreground access. On
+                    // Android 11+ PermissionController routes this to the location page.
+                    if (Build.VERSION.SDK_INT >= 29)
                         requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, BACKGROUND_PERMISSION);
                     else appSettings();
-                }).setNegativeButton("Not now", null).show();
+                }).setNeutralButton("App settings", (d, which) -> appSettings())
+                .setNegativeButton("Not now", null).show();
     }
     private void appSettings() {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
