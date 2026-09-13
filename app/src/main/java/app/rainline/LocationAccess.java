@@ -35,7 +35,7 @@ public final class LocationAccess {
         if (!foregroundAllowed(context)) throw new IOException("Allow location access or choose a fixed place.");
         if (!foreground && !backgroundAllowed(context)) {
             if (saved.hasLocation() && !saved.locationExpired(System.currentTimeMillis())) return saved;
-            throw new IOException("Open Rainline to update your location, or enable background location.");
+            throw UpdateIssue.LOCATION_STALE.failure("Background location is disabled and the saved position is too old. Open Rainline, enable background location, or choose a fixed place.");
         }
         LocationManager manager = context.getSystemService(LocationManager.class);
         if (manager == null) throw new IOException("Location is unavailable on this device.");
@@ -48,7 +48,10 @@ public final class LocationAccess {
                 if (candidate != null && (best == null || candidate.getTime() > best.getTime())) best = candidate;
             }
             // Reuse a recent fix rather than turning on GPS for every refresh.
-            if (best == null || age(best) > (foreground ? 2 : 10) * Forecast.MINUTE) {
+            if (!foreground && best == null && saved.hasLocation()
+                    && System.currentTimeMillis() - saved.locationAt <= 30 * Forecast.MINUTE
+                    && !saved.locationExpired(System.currentTimeMillis())) return saved;
+            if (best == null || age(best) > (foreground ? 2 : 30) * Forecast.MINUTE) {
                 AtomicReference<Location> result = new AtomicReference<>();
                 CountDownLatch latch = new CountDownLatch(1);
                 LocationListener listener = new LocationListener() {
@@ -79,6 +82,9 @@ public final class LocationAccess {
             throw new IOException("No location provider is available.");
         }
         if (best == null || age(best) > 30 * Forecast.MINUTE || age(best) < -Forecast.MINUTE) {
+            // Background location is throttled by Android. Keep a bounded, already known fix
+            // instead of preventing a weather refresh whenever a new fix cannot be obtained.
+            if (!foreground && saved.hasLocation() && !saved.locationExpired(System.currentTimeMillis())) return saved;
             throw new IOException("No recent location. Enable device location or choose a fixed place.");
         }
         saved.latitude = best.getLatitude();

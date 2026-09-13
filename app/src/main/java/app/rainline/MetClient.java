@@ -22,12 +22,16 @@ public final class MetClient {
         this.connections = connections;
     }
 
+    boolean retryDeferred(String key, long now) {
+        return now < Math.max(backoff.getLong("retry." + key, 0), backoff.getLong("retry.global", 0));
+    }
+
     public ForecastCache.Entry fetch(double lat, double lon) throws IOException {
         String key = ForecastWindow.coordinateKey(lat, lon);
         long now = System.currentTimeMillis();
         ForecastCache.Entry old = cache.read(key);
         if (old != null && now < old.expiresAt) return old; // Also applies to Refresh now.
-        if (now < Math.max(backoff.getLong("retry." + key, 0), backoff.getLong("retry.global", 0)))
+        if (retryDeferred(key, now))
             throw UpdateIssue.RETRY_DELAY.failure("Waiting before retrying the weather service.");
         String[] coordinates = key.split(",");
         URL url = new URL("https://api.met.no/weatherapi/nowcast/2.0/complete?lat="

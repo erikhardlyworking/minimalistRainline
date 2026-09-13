@@ -27,10 +27,16 @@ To follow your location from the home screen, open **Background location** in
 Rainline and choose **Allow all the time** in Android's permissions. This is
 optional. Without it, the app uses the position last obtained while open;
 after two hours it requires a new fix. A fixed place needs no location permission.
+**Background location** explicitly shows **Status: enabled** or **Status:
+disabled**. Enabling automatic updates does not grant this separate permission.
+Android can throttle background location even when permission is enabled;
+Rainline reuses recent fixes and keeps the existing two-hour age limit.
 Approximate location works, but precise location is preferable for local radar.
 
-Tap the widget to open the installed Yr app (no.nrk.yr), with the Yr website as
-a fallback. A widget that needs its first/current location opens Rainline setup.
+Tap the widget to open its Rainline settings and foreground refresh path.
+Below the graph, **Forecast updated** and **Last checked** show their times and
+elapsed ages. **Open Yr** opens the installed Yr app (no.nrk.yr), with the Yr
+website as a fallback. Widget setup is labelled **Configure the widget**.
 
 ## Reading the graph
 
@@ -108,7 +114,9 @@ Apply commits an appearance edit; Cancel leaves the widget untouched.
 
 **Diagnostics**, under About, previews a local summary of the app and Android
 versions, device model, widget dimensions, permissions, power/network state,
-forecast age and fixed update-error categories. Copy puts the displayed summary
+forecast age and fixed update-error categories. It also shows the latest wake
+event and job timestamps, expedited scheduling outcomes and Android's reasons
+for delaying a job. Copy puts the displayed summary
 on the clipboard; the app never sends it. Coordinates, place names, device IDs,
 request URLs and raw exception messages are excluded.
 
@@ -126,14 +134,21 @@ use cached data. Random delays spread scheduled requests across installations.
 The gate checks device activity, not whether the launcher is currently showing
 the widget. An already running request can finish after the screen locks.
 
-A runtime listener requests a refresh promptly on screen-on or unlock, without
-the routine job's extra random delay, then immediately redraws the cached graph.
+A runtime listener requests an expedited refresh on Android 12+ when screen-on
+or unlock is delivered and the forecast is due for checking, then immediately
+redraws the cached graph. A waiting ordinary job is promoted; already running
+or expedited work is left alone. If expedited quota is exhausted, an ordinary
+job is scheduled without an added delay. Older Android versions use ordinary
+jobs. Valid HTTP cache entries and retry delays avoid unnecessary wake jobs
+when the location is configured and recent.
 While the process is running and the phone is awake and unlocked, minute
 broadcasts also advance the graph without requesting weather.
 Android can defer [screen broadcasts](https://developer.android.com/develop/background-work/background-tasks/broadcasts#android_14)
 in a cached process; listeners also stop when the process is killed. The
 existing alarm, periodic job and widget callbacks remain as recovery paths.
-An instant refresh on every unlock is therefore not guaranteed.
+An instant refresh on every unlock is therefore not guaranteed. The
+[background update investigation](docs/background-updates.md) explains the
+platform limits, alternatives, location behaviour and testing limits.
 
 Actual intervals can be longer under Doze, power saving, launcher suspension
 or manufacturer restrictions. A bitmap already held by a suspended launcher
@@ -214,7 +229,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.6 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.7 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 

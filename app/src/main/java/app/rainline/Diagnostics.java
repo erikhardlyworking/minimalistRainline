@@ -5,6 +5,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.KeyguardManager;
 import android.app.job.JobScheduler;
+import android.app.job.JobInfo;
+import android.app.ActivityManager;
+import android.app.usage.UsageStatsManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -89,6 +92,24 @@ public final class Diagnostics {
         line(out, "Internet validated", capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED));
         JobScheduler jobs = context.getSystemService(JobScheduler.class);
         line(out, "Pending update jobs", jobs == null ? 0 : jobs.getAllPendingJobs().size());
+        if (Build.VERSION.SDK_INT >= 28) {
+            line(out, "Android background restricted", context.getSystemService(ActivityManager.class).isBackgroundRestricted());
+            line(out, "App standby bucket", context.getSystemService(UsageStatsManager.class).getAppStandbyBucket());
+        }
+        if (jobs != null) for (JobInfo job : jobs.getAllPendingJobs()) {
+            String label = job.isPeriodic() ? "Periodic job" : "Refresh job";
+            if (Build.VERSION.SDK_INT >= 31) line(out, label + " expedited", job.isExpedited());
+            line(out, label + " waiting reason", UpdateDiagnostics.pendingReason(jobs, job));
+        }
+        line(out, "Last screen-on received", age(UpdateDiagnostics.at(context, "screenOn"), now));
+        line(out, "Last unlock received", age(UpdateDiagnostics.at(context, "unlock"), now));
+        line(out, "Last alarm/system event", age(UpdateDiagnostics.at(context, "alarmOrSystemEvent"), now));
+        line(out, "Last job scheduled", age(UpdateDiagnostics.at(context, "scheduled"), now));
+        line(out, "Scheduling result", UpdateDiagnostics.outcome(context));
+        line(out, "Last job started", age(UpdateDiagnostics.at(context, "started"), now));
+        line(out, "Last job completed", age(UpdateDiagnostics.at(context, "completed"), now));
+        line(out, "Last job stopped", age(UpdateDiagnostics.at(context, "stopped"), now));
+        line(out, "Last stop reason", UpdateDiagnostics.lastStop(context));
         line(out, "Location mode", settings.follow ? "follow" : "fixed");
         line(out, "Location configured", settings.hasLocation());
         line(out, "Location stale", settings.follow && settings.locationExpired(now));

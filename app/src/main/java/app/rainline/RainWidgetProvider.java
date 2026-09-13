@@ -69,7 +69,7 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         views.setImageViewBitmap(R.id.chart, bitmap);
         String description = description(settings, forecast, now, state);
         views.setContentDescription(R.id.chart, description);
-        Intent click = new Intent(context, OpenForecastActivity.class)
+        Intent click = new Intent(context, SettingsActivity.class)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                 .setData(android.net.Uri.parse("rainline://widget/" + id));
         views.setOnClickPendingIntent(R.id.chart, PendingIntent.getActivity(context, id, click,
@@ -81,14 +81,14 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         if (!settings.hasLocation() || settings.locationExpired(now)) return "Location needed. Open Rainline to update your location.";
         if (state == ForecastState.UNAVAILABLE) return "Precipitation forecast unavailable. Open Rainline for details.";
         java.util.List<ForecastWindow.Segment> segments = ForecastWindow.segments(forecast, now);
-        if (segments.isEmpty()) return "No current precipitation data. Tap to open Yr.";
+        if (segments.isEmpty()) return "No current precipitation data. Tap to configure the widget.";
         double peak = 0;
         for (ForecastWindow.Segment s : segments) peak = Math.max(peak, Math.max(s.startRate, s.endRate));
         String axis = settings.showTicks ? " Five-minute ticks." : "";
         if (settings.labels) axis += " Labels at 30, 60 and 90 minutes.";
         axis += settings.showAxis ? " Dotted axis intervals have no data." : " Gaps have no data.";
         return String.format(java.util.Locale.getDefault(),
-                "Two-hour precipitation forecast. Peak %.1f millimetres per hour.%s%s Tap to open Yr.",
+                "Two-hour precipitation forecast. Peak %.1f millimetres per hour.%s%s Tap to configure the widget.",
                 peak, axis, forecast.isStale(now) ? " Using stored forecast data." : "");
     }
 }

@@ -37,6 +37,10 @@ final class ForecastChecks {
         JobInfo wake = Updates.refreshJob(context, true);
         JobInfo routine = Updates.refreshJob(context, false);
         check(wake.getMinLatencyMillis() == 0, "Wake requests must not add the routine random delay");
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            check(wake.isExpedited(), "Removing latency alone does not request prompt execution");
+            check(!routine.isExpedited(), "Routine jobs must not consume expedited quota");
+        }
         check(routine.getMinLatencyMillis() >= 5_000 && routine.getMinLatencyMillis() <= 35_000,
                 "Routine scheduling must retain jitter");
         check(wake.getNetworkType() == JobInfo.NETWORK_TYPE_ANY, "Prompt refresh must still require network");

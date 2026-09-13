@@ -1,18 +1,18 @@
 # Testing
 
-Version: 0.1.6. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.7. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
 - Debug APK build and Android lint (no errors; advisory warnings remain for
   pinned build tools, widget previews, drawing allocations and UI localisation).
-- 36 JVM tests: forecast parsing, rates/units, radar status, missing samples,
+- 38 JVM tests: forecast parsing, rates/units, radar status, missing samples,
   timestamp ordering, exact two-hour clipping, retention beyond 20 minutes, partial/dry data within
   the next 90 minutes, exhausted caches, loading/error precedence, clock mismatches, coordinate
   validation/rounding, settings persistence (including padding and ARGB
   background colour, rainfall scale, highlight controls and time-axis appearance), legacy preference
-  defaults, invalid rainfall settings and HTTP retry policy. Transport tests
+  defaults, invalid rainfall settings, elapsed-age labels and HTTP retry policy. Transport tests
   cover identification/conditional headers through redirects, unsafe redirects,
   redirect loops, gzip/deflate decoding and decompressed-response size limits.
 - Device smoke tests on a Samsung SM-S938B running Android 16 / API 36:
@@ -43,11 +43,21 @@ without clearing existing widgets or preferences.
   response and subsequent 304, preserving the new response validators, stopping
   fallback display when its samples expire, and clearing it when radar recovers.
 - An opt-in Android 16 / API 36 emulator test creates a temporary widget,
-  puts the emulator to sleep, verifies that no fetch is queued, then wakes and
-  unlocks it using real system events. A refresh is queued without an added
-  delay while the existing cached data remains usable. Test widget and cache
-  are removed afterward.
+  verifies that sleep blocks new jobs and that an unexpired cache consumes no
+  wake-job quota, then expires the cache for a second sleep/wake cycle. It waits
+  for an actual MET fetch at the public Oslo test location to complete and
+  verifies the server-check timestamp, completed attempt and returned samples.
+  This passed in 0.1.7. Test widget and cache are removed/restored afterward.
   Screen control is explicitly prohibited by this test on physical devices.
+- Simulated scheduler checks verify expedited-quota rejection with an immediate
+  regular fallback, promotion of a queued ordinary job, deduplication of repeated
+  wakes, and diagnostic reporting when scheduling is rejected altogether.
+- Isolated permission checks reproduce background-location-disabled behaviour:
+  a 90-minute-old saved fix is reused with its real timestamp; a fix older than
+  two hours returns the explicit location-stale category and permission guidance.
+  Tests do not change the phone's permissions.
+- Native settings checks verify the Open Yr control and removal of the time-axis
+  explanation. The settings layout was visually inspected on the emulator.
 - Diagnostic tests use private sentinel values to check that coordinates,
   place names, raw errors and request URLs never reach the report. The Copy
   button was not pressed by automation, preserving the device clipboard.
@@ -70,9 +80,12 @@ without clearing existing widgets or preferences.
    colour. Also try Content padding on each edge and Background colour with the picker,
    hex entry and opacity. Existing colours remain saved; use Transparent and
    Apply to clear an existing background. Check that Apply updates the selected widget.
-3. Tap the placed widget and check that Yr opens.
-4. Enable optional background location if you want the widget to follow you.
-   Check the selected coordinates and forecast status after moving.
+3. Tap the placed widget and check that its settings open. Check the forecast
+   update/check timestamps and elapsed ages below the graph, then tap **Open Yr**.
+4. In follow mode, check **Background location → Status: enabled/disabled**.
+   Enable it if you want following to continue after two hours away from the
+   app; alternatively choose a fixed place. Check the selected coordinates and
+   forecast status after moving.
 5. Add a second widget with a fixed place and verify independent settings.
 6. Leave the phone asleep for over 20 minutes, then unlock it. Check that the
    graph advances to now and still shows remaining cached data while refreshing.
@@ -84,7 +97,9 @@ without clearing existing widgets or preferences.
    ring means waiting for data; × means data could not be obtained. A usable
    cached graph remains visible even if the latest refresh fails.
 8. Open **About → Diagnostics**, inspect the summary, and try Copy if you want
-   to paste the technical details into a support request.
+   to paste the technical details into a support request. For wake problems,
+   compare the latest received wake, job start/completion, pending reason and
+   last update category.
 
 Launcher-specific pinning, resize/reconfiguration, tap-through and long-running
 background location/battery behaviour still need hands-on testing, including

@@ -32,8 +32,9 @@ Searching by place name uses Android's geocoding service. The device's geocoding
 provider receives that query and handles it under its own policies. Entering
 coordinates avoids name search.
 
-Tapping the widget opens Yr if installed or its website, whose own policies
-apply. About links open external documentation in your browser.
+Tapping the widget opens Rainline settings. The **Open Yr** button opens Yr if
+installed or its website, whose own policies apply. About links open external
+documentation in your browser.
 
 ## Removing data
 
@@ -45,7 +46,11 @@ app permissions; a fixed place remains available as an alternative.
 
 Opening Diagnostics generates a summary locally from selected technical fields.
 It includes app/Android versions, device model, widget dimensions, permission
-and power/network states, forecast ages and fixed error categories. It excludes
+and power/network states, forecast ages and fixed error categories. Rainline
+also keeps the latest received wake-event and job timestamps and fixed
+scheduling/stop categories locally, replacing earlier values rather than
+building an event history. The summary includes those fields and Android's
+reported job-delay reasons. It excludes
 coordinates, place names, device IDs, request URLs and raw exception messages.
 Rainline does not upload the report or retain a report history. Pressing Copy
 places it on Android's clipboard so you can choose where to paste it; the

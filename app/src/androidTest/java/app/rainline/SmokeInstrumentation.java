@@ -25,6 +25,8 @@ public final class SmokeInstrumentation extends Instrumentation {
             Context context = getTargetContext();
             ClientChecks.run(context);
             ForecastChecks.run(context);
+            SchedulingChecks.run(context);
+            LocationChecks.run(context);
             if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();
@@ -76,6 +78,12 @@ public final class SmokeInstrumentation extends Instrumentation {
             check(activity != null, "Settings did not launch");
             runOnMainSync(() -> {
                 android.view.View root = activity.findViewById(android.R.id.content);
+                check(find(root, android.widget.Button.class, "Open Yr") != null, "Open Yr button missing");
+                check(find(root, android.widget.TextView.class, "30 · 60 · 90 minutes  /  small ticks every 5 minutes") == null,
+                        "Old time-axis explanatory text must be removed");
+            });
+            runOnMainSync(() -> {
+                android.view.View root = activity.findViewById(android.R.id.content);
                 int width = context.getResources().getDisplayMetrics().widthPixels;
                 int height = context.getResources().getDisplayMetrics().heightPixels;
                 root.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
@@ -96,7 +104,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                 diagnostics.dismiss();
             });
             runOnMainSync(activity::finish);
-            String network = "";
+            String network = wake ? " Emulator wake triggered a completed MET forecast fetch." : "";
             if (live) {
                 MetClient client = new MetClient(context);
                 ForecastCache.Entry response = client.fetch(59.9139, 10.7522);
@@ -108,7 +116,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                 network = " Live MET HTTPS fetch, JSON parsing and expiry-cache reuse also passed.";
             }
             results.putString("stream", "\nPassed: four widget sizes, bitmap budget, RemoteViews inflation, missing-data rendering, settings launch and layout capture; padding bounds, custom/transparent backgrounds and colour/padding dialog edits."
-                    + " Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, prompt wake job configuration and private-data exclusion from diagnostics passed." + network + "\n");
+                    + " Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, expedited quota fallback, queued-job promotion, disabled-background-location handling, settings navigation controls and private-data exclusion from diagnostics passed." + network + "\n");
             finish(Activity.RESULT_OK, results);
         } catch (Throwable e) {
             results.putString("stream", "\nFAILED: " + android.util.Log.getStackTraceString(e));
@@ -301,7 +309,8 @@ public final class SmokeInstrumentation extends Instrumentation {
         return find(root, type, null);
     }
     private static <T extends android.view.View> T find(android.view.View root, Class<T> type, String description) {
-        if (type.isInstance(root) && (description == null || description.equals(root.getContentDescription())))
+        if (type.isInstance(root) && (description == null || description.equals(root.getContentDescription())
+                || (root instanceof android.widget.TextView && description.contentEquals(((android.widget.TextView) root).getText()))))
             return type.cast(root);
         if (root instanceof android.view.ViewGroup) {
             android.view.ViewGroup group = (android.view.ViewGroup) root;

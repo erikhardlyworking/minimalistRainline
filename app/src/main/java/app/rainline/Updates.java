@@ -13,6 +13,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.os.PowerManager;
 import android.os.PersistableBundle;
+import android.os.Build;
 import android.app.KeyguardManager;
 import java.util.concurrent.ThreadLocalRandom;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public final class Updates {
                     .setPeriodic(15 * Forecast.MINUTE, 5 * Forecast.MINUTE)
                     .setPersisted(true).setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build());
         } else if (!automatic) jobs.cancel(PERIODIC_JOB);
-        if (ids.length == 0) jobs.cancel(IMMEDIATE_JOB);
+        if (!automatic) jobs.cancel(IMMEDIATE_JOB);
         AlarmManager alarms = context.getSystemService(AlarmManager.class);
         PendingIntent pending = PendingIntent.getBroadcast(context, 0,
                 new Intent(context, RefreshReceiver.class).setAction("app.rainline.TICK"),
@@ -63,18 +64,52 @@ public final class Updates {
     }
     public static void enqueue(Context context, boolean prompt) {
         if (!canFetchInBackground(context)) return;
+        if (prompt && !forecastCheckDue(context)) return;
         JobScheduler jobs = context.getSystemService(JobScheduler.class);
-        if (jobs.getPendingJob(IMMEDIATE_JOB) == null) jobs.schedule(refreshJob(context, prompt));
+        scheduleRefresh(context, jobs, prompt);
+    }
+    static void scheduleRefresh(Context context, JobScheduler jobs, boolean prompt) {
+        JobInfo existing = jobs.getPendingJob(IMMEDIATE_JOB);
+        if (existing != null && (!prompt || RefreshJobService.isRunning(IMMEDIATE_JOB)
+                || (Build.VERSION.SDK_INT >= 31 && existing.isExpedited()))) return;
+        // Replace an ordinary queued job on wake. Leaving it in place would retain its delays.
+        JobInfo request = refreshJob(context, prompt);
+        int result = jobs.schedule(request);
+        String outcome = prompt && Build.VERSION.SDK_INT >= 31 ? "expedited" : "regular";
+        if (result == JobScheduler.RESULT_FAILURE && prompt && Build.VERSION.SDK_INT >= 31) {
+            result = jobs.schedule(refreshJob(context, true, false));
+            outcome = "regular_after_expedited_quota";
+        }
+        UpdateDiagnostics.scheduled(context, result == JobScheduler.RESULT_SUCCESS ? outcome : "rejected");
     }
     static JobInfo refreshJob(Context context, boolean prompt) {
+        return refreshJob(context, prompt, prompt && Build.VERSION.SDK_INT >= 31);
+    }
+    private static JobInfo refreshJob(Context context, boolean prompt, boolean expedited) {
         PersistableBundle extras = new PersistableBundle();
         extras.putLong(REQUESTED_AT, System.currentTimeMillis());
         JobInfo.Builder job = new JobInfo.Builder(IMMEDIATE_JOB, new ComponentName(context, RefreshJobService.class))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setExtras(extras)
                 .setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
-        if (!prompt) job.setMinimumLatency(ThreadLocalRandom.current().nextLong(5_000, 35_001));
+        if (expedited && Build.VERSION.SDK_INT >= 31) job.setExpedited(true);
+        else if (!prompt) job.setMinimumLatency(ThreadLocalRandom.current().nextLong(5_000, 35_001));
         return job.build();
+    }
+    static boolean forecastCheckDue(Context context) {
+        SettingsStore store = new SettingsStore(context);
+        ForecastCache cache = new ForecastCache(context);
+        MetClient client = new MetClient(context);
+        long now = System.currentTimeMillis();
+        for (int id : widgetIds(context)) {
+            WidgetSettings settings = store.get(id);
+            if (!settings.automatic) continue;
+            if (!settings.hasLocation() || settings.locationExpired(now)) return true;
+            String key = ForecastWindow.coordinateKey(settings.latitude, settings.longitude);
+            ForecastCache.Entry entry = cache.read(key);
+            if ((entry == null || now >= entry.expiresAt) && !client.retryDeferred(key, now)) return true;
+        }
+        return false;
     }
     public static boolean pending(Context context, int id) {
         if (settingsRefreshId == id || inFlight.contains(id)) return true;

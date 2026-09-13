@@ -146,7 +146,7 @@ public final class SettingsActivity extends Activity {
         TextView title = text("Rainline", 32);
         title.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         content.addView(title);
-        TextView subtitle = text(configuring ? "Set up your widget" : "Widget settings", 14);
+        TextView subtitle = text(configuring ? "Configure the widget" : "Widget settings", 14);
         subtitle.setPadding(0, dp(3), 0, dp(22));
         content.addView(subtitle);
 
@@ -177,17 +177,23 @@ public final class SettingsActivity extends Activity {
         preview.setContentDescription(live ? RainWidgetProvider.description(settings, forecast,
                 System.currentTimeMillis(), ForecastState.DATA) : "Sample precipitation graph. Appearance preview only.");
         content.addView(preview, new LinearLayout.LayoutParams(-1, dp(146)));
-        small("30 · 60 · 90 minutes  /  small ticks every 5 minutes");
+        long shownAt = System.currentTimeMillis();
+        ForecastCache.Entry cached = settings.hasLocation() ? new ForecastCache(this).read(
+                ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : null;
+        small("Forecast updated: " + ForecastTimes.describe(forecast == null ? 0 : forecast.updatedAt, shownAt)
+                + "\nLast checked: " + ForecastTimes.describe(cached == null ? 0 : cached.checkedAt, shownAt));
+        button("Open Yr", () -> startActivity(new Intent(this, OpenForecastActivity.class)
+                .setAction(OpenForecastActivity.OPEN_YR)), false);
         space(20);
 
         section("Location");
         row("Location mode", settings.follow ? "Follow my location" : "Use a fixed place", this::chooseLocationMode);
         if (settings.follow) {
             row("Current location", locationLabel(settings), this::locate);
-            row("Background location", LocationAccess.backgroundAllowed(this) ? "Allowed"
-                    : "Tap to enable following from the home screen", this::backgroundLocation);
+            row("Background location", LocationAccess.backgroundAllowed(this) ? "Status: enabled"
+                    : "Status: disabled\nTap to enable following from the home screen", this::backgroundLocation);
             if (!LocationAccess.backgroundAllowed(this))
-                small("Without background access, open Rainline to update your position. A fixed place works without location permission.");
+                small("Without background access, the saved position is used for up to two hours. After that, open Rainline for a fresh position or use a fixed place. A fixed place updates without location permission.");
         } else {
             row("Fixed place", settings.hasLocation() ? locationLabel(settings) : "Choose a place", this::findPlace);
         }
@@ -241,7 +247,7 @@ public final class SettingsActivity extends Activity {
                 + " mm/h; a small upward mark means rain exceeds the scale.");
 
         section("Updates");
-        row("Automatic updates", settings.automatic ? "On" : "Off", () -> {
+        row("Automatic updates", settings.automatic ? "Status: enabled" : "Status: disabled", () -> {
             WidgetSettings s = store.get(widgetId); s.automatic = !s.automatic; saveSettings(s);
             Updates.schedule(this);
             if (s.automatic) refresh(false);
@@ -253,7 +259,7 @@ public final class SettingsActivity extends Activity {
                 .setPositiveButton("OK", null).show());
         Button refresh = button(Updates.busy() ? "Updating…" : "Refresh now", () -> refresh(false), false);
         refresh.setEnabled(!Updates.busy());
-        small("Rainline requests a refresh on wake or unlock and immediately realigns the cached graph. Regular refreshes aim for about 5–6 minutes while awake and unlocked, with a 15-minute fallback. Android may delay wake events and updates. Rainline honours the weather service’s cache even when you refresh manually.");
+        small("Rainline requests a priority refresh after wake or unlock when new data is due. Regular refreshes aim for about 5–6 minutes while awake and unlocked, with a 15-minute fallback. Android may delay wake events and updates. Tap the widget to open these settings and refresh in the foreground. The weather service’s cache is honoured even when refreshing manually.");
 
         section("About");
         row("Weather data", "MET Norway · CC BY 4.0", () -> new AlertDialog.Builder(this)

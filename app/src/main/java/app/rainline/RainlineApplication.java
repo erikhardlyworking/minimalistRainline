@@ -28,6 +28,7 @@ public final class RainlineApplication extends Application {
     static void handleScreenEvent(Context context, String action) {
         boolean wake = Intent.ACTION_SCREEN_ON.equals(action) || Intent.ACTION_USER_PRESENT.equals(action);
         if (!wake && !Intent.ACTION_TIME_TICK.equals(action)) return;
+        if (wake) UpdateDiagnostics.event(context, Intent.ACTION_USER_PRESENT.equals(action) ? "unlock" : "screenOn");
         if (!Updates.deviceActive(context) || Updates.widgetIds(context).length == 0) return;
         // Queue the fetch first, then immediately realign the cached graph without waiting for HTTP.
         if (wake) Updates.enqueue(context, true);

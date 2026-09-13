@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-/** Opt-in emulator-only test: real screen events and jobs, with an isolated test widget and cached data. */
+/** Opt-in emulator-only test: real screen events and a completed MET fetch at a public Oslo test location. */
 final class WakeChecks {
     static void run(Instrumentation test, Context context) throws Exception {
         check(Build.MODEL.startsWith("sdk_gphone"), "Screen-control tests are restricted to the Android emulator");
@@ -30,13 +30,13 @@ final class WakeChecks {
         JobScheduler jobs = context.getSystemService(JobScheduler.class);
         SettingsStore store = new SettingsStore(context);
         ForecastCache cache = new ForecastCache(context);
-        String key = ForecastWindow.coordinateKey(0, 179.1234);
+        String key = ForecastWindow.coordinateKey(59.9139, 10.7522);
         ForecastCache.Entry previous = cache.read(key);
         int id = host.allocateAppWidgetId();
         try {
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();
-            settings.follow = false; settings.latitude = 0; settings.longitude = 179.1234;
+            settings.follow = false; settings.latitude = 59.9139; settings.longitude = 10.7522;
             store.put(id, settings);
             ForecastCache.Entry entry = new ForecastCache.Entry();
             entry.body = "{\"properties\":{\"meta\":{\"updated_at\":\"" + Instant.ofEpochMilli(now)
@@ -62,13 +62,31 @@ final class WakeChecks {
             shell(automation, "input keyevent 224");
             shell(automation, "wm dismiss-keyguard");
             await(() -> Updates.deviceActive(context), "Emulator did not become interactive and unlocked");
-            await(() -> jobs.getPendingJob(1102) != null || store.attemptedAt(id) >= wakeAt,
-                    "Real wake/unlock broadcasts did not queue a refresh");
-            JobInfo queued = jobs.getPendingJob(1102);
-            if (queued != null) check(queued.getMinLatencyMillis() == 0, "Wake refresh added a random delay");
+            await(() -> UpdateDiagnostics.at(context, "unlock") >= wakeAt || UpdateDiagnostics.at(context, "screenOn") >= wakeAt,
+                    "Wake broadcasts were not delivered to the active test process");
+            check(jobs.getPendingJob(1102) == null, "Fresh cache should not consume wake-job quota");
             check(cache.read(key).checkedAt == now, "Wake request bypassed a valid HTTP cache");
             check(ForecastState.of(settings, entry.displayForecast(System.currentTimeMillis()), System.currentTimeMillis(),
                     store.issue(id), Updates.pending(context, id)) == ForecastState.DATA, "Wake discarded usable cached data");
+
+            // Exercise the user's failure mode: an expired cache must actually be refreshed after wake.
+            shell(automation, "input keyevent 223");
+            await(() -> !Updates.deviceActive(context), "Emulator did not sleep a second time");
+            jobs.cancelAll();
+            Updates.IO.submit(() -> {}).get(5, TimeUnit.SECONDS);
+            entry.expiresAt = System.currentTimeMillis() - 1;
+            cache.write(key, entry);
+            long fetchWakeAt = System.currentTimeMillis();
+            shell(automation, "input keyevent 224");
+            shell(automation, "wm dismiss-keyguard");
+            await(() -> {
+                ForecastCache.Entry refreshed = cache.read(key);
+                return refreshed != null && refreshed.checkedAt >= fetchWakeAt && store.attemptedAt(id) >= fetchWakeAt;
+            }, "Wake queued work but did not complete a forecast fetch: " + UpdateDiagnostics.outcome(context));
+            check(UpdateDiagnostics.at(context, "started") >= fetchWakeAt, "Wake did not start a job");
+            check(store.issue(id) == UpdateIssue.NONE || store.issue(id) == UpdateIssue.API_DEPRECATED,
+                    "Wake fetch completed with " + store.issue(id));
+            check(cache.read(key).forecast().points.size() > 1, "Wake did not download a real forecast");
         } finally {
             WidgetSettings disabled = store.get(id); disabled.automatic = false; store.put(id, disabled);
             jobs.cancelAll();
@@ -91,7 +109,7 @@ final class WakeChecks {
              FileInputStream input = new FileInputStream(fd.getFileDescriptor())) { input.readAllBytes(); }
     }
     private static void await(BooleanSupplier condition, String message) throws Exception {
-        long deadline = SystemClock.elapsedRealtime() + 10_000;
+        long deadline = SystemClock.elapsedRealtime() + 30_000;
         while (!condition.getAsBoolean() && SystemClock.elapsedRealtime() < deadline) Thread.sleep(50);
         check(condition.getAsBoolean(), message);
     }
