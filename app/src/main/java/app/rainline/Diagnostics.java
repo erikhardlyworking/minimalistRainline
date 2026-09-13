@@ -120,6 +120,7 @@ public final class Diagnostics {
         line(out, "Location stale", settings.follow && settings.locationExpired(now));
         if (settings.follow) line(out, "Location age", age(settings.locationAt, now));
         line(out, "Automatic updates", settings.automatic);
+        line(out, "Rain / dry refresh interval (min)", settings.rainRefreshMinutes + " / " + settings.dryRefreshMinutes);
         line(out, "Refresh pending", Updates.pending(context, widgetId));
         line(out, "Last update attempt", age(attemptedAt, now));
         line(out, "Last update category", issue.name().toLowerCase(Locale.ROOT));
@@ -130,6 +131,10 @@ public final class Diagnostics {
             line(out, "API deprecated", entry.deprecated);
             try {
                 Forecast forecast = entry.forecast();
+                line(out, "Current refresh interval (min)", RefreshPolicy.intervalMinutes(settings, forecast, now));
+                line(out, "Interval/cache due in (min)", Math.max(0,
+                        (RefreshPolicy.nextCheckAt(settings, forecast, entry.checkedAt, entry.expiresAt, now)
+                                - now + Forecast.MINUTE - 1) / Forecast.MINUTE));
                 line(out, "Forecast age", age(forecast.updatedAt, now));
                 line(out, "Forecast older than 20 min", now - forecast.updatedAt > Forecast.STALE_AFTER);
                 line(out, "Radar data available", forecast.hasRadar());

@@ -254,14 +254,16 @@ public final class SettingsActivity extends Activity {
             Updates.schedule(this);
             if (s.automatic) refresh(false);
         });
+        row("When rain is forecast", "Every " + settings.rainRefreshMinutes + " minutes", () -> refreshInterval(true));
+        row("When no rain is forecast", "Every " + settings.dryRefreshMinutes + " minutes", () -> refreshInterval(false));
         row("Forecast status", status(settings, forecast), () -> new AlertDialog.Builder(this)
                 .setTitle("Forecast status").setMessage(status(settings, forecast)
                         + "\n\nA dotted part of the axis has no forecast data. An open ring means waiting for data; × means data could not be obtained."
                         + "\n\nStored forecasts stay visible while they contain any valid intervals in the next 90 minutes. The two-hour axis advances with the current time, leaving missing intervals empty.")
                 .setPositiveButton("OK", null).show());
-        Button refresh = button(Updates.busy() ? "Updating…" : "Refresh now", () -> refresh(false), false);
+        Button refresh = button(Updates.busy() ? "Updating…" : "Refresh now", () -> refresh(true), false);
         refresh.setEnabled(!Updates.busy());
-        small("Rainline requests a priority refresh after wake or unlock when new data is due. Regular refreshes aim for about 5–6 minutes while awake and unlocked, with a 15-minute fallback. Android may delay wake events and updates. Tap the widget to open these settings and refresh in the foreground. The weather service’s cache is honoured even when refreshing manually.");
+        small("Rain anywhere in the next two hours uses the rain interval. The slower dry interval needs at least 90 minutes of continuous dry data; missing data uses the rain interval. Intervals start at the last successful server check and also apply after wake or unlock. The graph can advance without downloading data. Updates pause while locked or asleep, and Android may delay them. Refresh now checks sooner while respecting the weather service’s cache.");
 
         section("About");
         row("Weather data", "MET Norway · CC BY 4.0", () -> new AlertDialog.Builder(this)
@@ -389,12 +391,31 @@ public final class SettingsActivity extends Activity {
     private void appSettings() {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
     }
-    private void refresh(boolean locate) {
+    private void refreshInterval(boolean rain) {
+        int[] intervals = WidgetSettings.REFRESH_INTERVALS;
+        String[] labels = new String[intervals.length];
+        WidgetSettings current = store.get(widgetId);
+        int selected = rain ? current.rainRefreshMinutes : current.dryRefreshMinutes;
+        int checked = 0;
+        for (int i = 0; i < intervals.length; i++) {
+            labels[i] = "Every " + intervals[i] + " minutes";
+            if (intervals[i] == selected) checked = i;
+        }
+        choices(rain ? "When rain is forecast" : "When no rain is forecast", labels, checked, chosen -> {
+            WidgetSettings settings = store.get(widgetId);
+            if (rain) settings.rainRefreshMinutes = intervals[chosen];
+            else settings.dryRefreshMinutes = intervals[chosen];
+            saveSettings(settings);
+            Updates.schedule(this);
+            if (settings.automatic) refresh(false);
+        });
+    }
+    private void refresh(boolean manual) {
         if (Updates.busy()) return;
         WidgetSettings s = store.get(widgetId);
         if (s.follow && !LocationAccess.foregroundAllowed(this)) { locate(); return; }
         if (!s.follow && !s.hasLocation()) { findPlace(); return; }
-        Updates.refreshFromSettings(this, widgetId, locate, () -> {
+        Updates.refreshFromSettings(this, widgetId, manual, () -> {
             if (!isFinishing() && !isDestroyed()) showPage();
         });
         showPage();
@@ -492,7 +513,7 @@ public final class SettingsActivity extends Activity {
         settings.locationAt = 0; settings.accuracy = 0;
         store.status(widgetId, "", 0);
         saveSettings(settings);
-        refresh(false);
+        refresh(true);
     }
     private void finishConfiguration() {
         if (!store.get(widgetId).hasLocation()) { locateOrFind(); return; }

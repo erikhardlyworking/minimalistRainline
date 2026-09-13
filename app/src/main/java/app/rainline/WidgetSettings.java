@@ -11,6 +11,8 @@ public final class WidgetSettings {
     public float accuracy;
     public int guides = 2; // 0 light grey, 1 white, 2 hidden
     public boolean normalLine, labels = true, automatic = true;
+    public int rainRefreshMinutes = 5, dryRefreshMinutes = 15;
+    public static final int[] REFRESH_INTERVALS = {5, 10, 15, 30, 60};
     public int labelSize = 11;
     public boolean showAxis = true, showTicks = true;
     // Defaults retain the original chart placement, including space below its labels.
@@ -49,6 +51,7 @@ public final class WidgetSettings {
             o.put("labelSize", labelSize);
             o.put("showAxis", showAxis).put("showTicks", showTicks);
             o.put("automatic", automatic);
+            o.put("rainRefreshMinutes", rainRefreshMinutes).put("dryRefreshMinutes", dryRefreshMinutes);
             o.put("paddingLeft", paddingLeft).put("paddingTop", paddingTop);
             o.put("paddingRight", paddingRight).put("paddingBottom", paddingBottom);
             o.put("backgroundColor", ColorValue.format(backgroundColor));
@@ -75,6 +78,8 @@ public final class WidgetSettings {
             s.showAxis = o.optBoolean("showAxis", true);
             s.showTicks = o.optBoolean("showTicks", true);
             s.automatic = o.optBoolean("automatic", true);
+            s.rainRefreshMinutes = refreshInterval(o.optInt("rainRefreshMinutes", 5), 5);
+            s.dryRefreshMinutes = refreshInterval(o.optInt("dryRefreshMinutes", 15), 15);
             s.paddingLeft = padding(o.optInt("paddingLeft", 8));
             s.paddingTop = padding(o.optInt("paddingTop", 9));
             s.paddingRight = padding(o.optInt("paddingRight", 8));
@@ -92,4 +97,8 @@ public final class WidgetSettings {
         return s;
     }
     private static int padding(int value) { return Math.max(0, Math.min(48, value)); }
+    private static int refreshInterval(int value, int fallback) {
+        for (int interval : REFRESH_INTERVALS) if (value == interval) return value;
+        return fallback;
+    }
 }

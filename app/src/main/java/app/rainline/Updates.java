@@ -64,7 +64,7 @@ public final class Updates {
     }
     public static void enqueue(Context context, boolean prompt) {
         if (!canFetchInBackground(context)) return;
-        if (prompt && !forecastCheckDue(context)) return;
+        if (!forecastCheckDue(context)) return;
         JobScheduler jobs = context.getSystemService(JobScheduler.class);
         scheduleRefresh(context, jobs, prompt);
     }
@@ -98,18 +98,26 @@ public final class Updates {
     }
     static boolean forecastCheckDue(Context context) {
         SettingsStore store = new SettingsStore(context);
-        ForecastCache cache = new ForecastCache(context);
-        MetClient client = new MetClient(context);
         long now = System.currentTimeMillis();
         for (int id : widgetIds(context)) {
             WidgetSettings settings = store.get(id);
-            if (!settings.automatic) continue;
-            if (!settings.hasLocation() || settings.locationExpired(now)) return true;
-            String key = ForecastWindow.coordinateKey(settings.latitude, settings.longitude);
-            ForecastCache.Entry entry = cache.read(key);
-            if ((entry == null || now >= entry.expiresAt) && !client.retryDeferred(key, now)) return true;
+            if (settings.automatic && automaticRefreshDue(context, settings, now)) return true;
         }
         return false;
+    }
+    static boolean automaticRefreshDue(Context context, WidgetSettings settings, long now) {
+        // A stale followed position must be resolved before deciding which location's cache to use.
+        return !settings.hasLocation() || settings.locationExpired(now) || weatherCheckDue(context, settings, now);
+    }
+    static boolean weatherCheckDue(Context context, WidgetSettings settings, long now) {
+        if (!settings.hasLocation()) return true;
+        String key = ForecastWindow.coordinateKey(settings.latitude, settings.longitude);
+        if (new MetClient(context).retryDeferred(key, now)) return false;
+        ForecastCache.Entry entry = new ForecastCache(context).read(key);
+        if (entry == null) return true;
+        try {
+            return now >= RefreshPolicy.nextCheckAt(settings, entry.forecast(), entry.checkedAt, entry.expiresAt, now);
+        } catch (org.json.JSONException ignored) { return true; }
     }
     public static boolean pending(Context context, int id) {
         if (settingsRefreshId == id || inFlight.contains(id)) return true;
@@ -135,12 +143,13 @@ public final class Updates {
             }
         });
     }
-    public static void refreshFromSettings(Context context, int id, boolean locate, Runnable completed) {
+    public static void refreshFromSettings(Context context, int id, boolean manual, Runnable completed) {
+        if (!manual && !automaticRefreshDue(context, new SettingsStore(context).get(id), System.currentTimeMillis())) return;
         if (!refreshing.compareAndSet(false, true)) return;
         settingsRefreshId = id;
         Context app = context.getApplicationContext();
         IO.execute(() -> {
-            try { refreshOne(app, id, true, locate); }
+            try { refreshOne(app, id, true, manual); }
             finally {
                 settingsRefreshId = -1;
                 refreshing.set(false);
@@ -164,10 +173,12 @@ public final class Updates {
         return false;
     }
 
-    private static void refreshOne(Context context, int id, boolean foreground, boolean locate) {
+    private static void refreshOne(Context context, int id, boolean foreground, boolean manual) {
         SettingsStore store = new SettingsStore(context);
         WidgetSettings settings = store.get(id);
         long now = System.currentTimeMillis();
+        // Recheck on the worker: another widget or foreground refresh may have filled this cache.
+        if (!manual && !automaticRefreshDue(context, settings, now)) return;
         UpdateIssue stage = UpdateIssue.LOCATION_UNAVAILABLE;
         inFlight.add(id);
         RainWidgetProvider.render(context, id);
@@ -189,6 +200,8 @@ public final class Updates {
             if (settings.locationExpired(now)) throw UpdateIssue.LOCATION_STALE.failure("Open Rainline to update your location.");
             // The display may have turned off during a location request. Keep the cached forecast then.
             if (!foreground && !deviceActive(context)) return;
+            // Location resolution may have changed the coordinate key. Each place has its own cadence.
+            if (!manual && !weatherCheckDue(context, settings, System.currentTimeMillis())) return;
             stage = UpdateIssue.IO_ERROR;
             ForecastCache.Entry entry = new MetClient(context).fetch(settings.latitude, settings.longitude);
             Forecast result;

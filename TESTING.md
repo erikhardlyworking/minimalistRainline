@@ -1,13 +1,13 @@
 # Testing
 
-Version: 0.1.8. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.9. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
 - Debug APK build and Android lint (no errors; advisory warnings remain for
   pinned build tools, widget previews, drawing allocations and UI localisation).
-- 38 JVM tests: forecast parsing, rates/units, radar status, missing samples,
+- 50 JVM tests: forecast parsing, rates/units, radar status, missing samples,
   timestamp ordering, exact two-hour clipping, retention beyond 20 minutes, partial/dry data within
   the next 90 minutes, exhausted caches, loading/error precedence, clock mismatches, coordinate
   validation/rounding, settings persistence (including padding and ARGB
@@ -15,6 +15,17 @@ without clearing existing widgets or preferences.
   defaults, invalid rainfall settings, elapsed-age labels and HTTP retry policy. Transport tests
   cover identification/conditional headers through redirects, unsafe redirects,
   redirect loops, gzip/deflate decoding and decompressed-response size limits.
+- Refresh-policy tests cover the dry/rain defaults, rain later in the two-hour
+  window, ended rain, missing radar/samples, shortened dry coverage, isolated
+  rain samples, independent settings and legacy defaults, HTTP expiry, and
+  measuring intervals from server checks rather than forecast issue times.
+- Isolated native interval checks passed on the phone and emulator: an expired
+  HTTP cache does not bypass the selected dry interval; widgets at the same
+  place can choose different intervals; retry delays remain enforced; opening
+  settings respects the interval; a manual cached refresh runs sooner without
+  bypassing server expiry. Both interval controls are present in settings.
+  The real emulator unlock/fetch/host-delivery regression also passed in 0.1.9
+  with the cached server-check timestamp more than five minutes old.
 - Device smoke tests on a Samsung SM-S938B running Android 16 / API 36:
   Canvas rendering at 130×64, 240×110, 400×100 and 180×240 dp,
   bitmap memory bounds, RemoteViews inflation, unavailable-data rendering,
@@ -102,6 +113,10 @@ without clearing existing widgets or preferences.
    Location → Allow all the time**. Enable it if you want following to continue after two hours away from the
    app; alternatively choose a fixed place. Check the selected coordinates and
    forecast status after moving.
+   Under **Updates**, configure **When rain is forecast** and **When no rain is
+   forecast** independently. Defaults are 5 and 15 minutes. Returning from
+   standby or opening settings should not fetch again before the applicable
+   interval has elapsed. **Refresh now** may run sooner, subject to MET's cache.
 5. Add a second widget with a fixed place and verify independent settings.
 6. Leave the phone asleep for over 20 minutes, then unlock it. Check that the
    graph advances to now and still shows remaining cached data while refreshing.

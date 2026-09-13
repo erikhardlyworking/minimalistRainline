@@ -129,9 +129,29 @@ request URLs and raw exception messages are excluded.
 
 ## Updates and battery
 
+Under **Updates**, each widget has two configurable intervals:
+
+- **When rain is forecast**: **5 minutes** by default.
+- **When no rain is forecast**: **15 minutes** by default.
+
+Each can be set to 5, 10, 15, 30 or 60 minutes. Any positive precipitation rate
+in the next two hours selects the rain interval, independently of the graph's
+highlight threshold. The dry interval requires at least 90 continuous minutes
+of dry data; missing radar or insufficient near-term data uses the rain interval.
+This does not change which cached samples the graph can display.
+
+Intervals run from the last successful server check, including a 304 response,
+and apply to scheduled jobs, wake/unlock events and automatic refreshes while
+settings are open. MET's Expires and retry delays can postpone a request further.
+**Refresh now** can check before the chosen interval, while still honouring MET's
+cache and retry rules. Graph redraws do not reset the interval or download data.
+
 Rainline combines a best-effort five-to-six-minute **non-wakeup, inexact alarm** with
-a network-constrained **15-minute JobScheduler job**. Alarms first request a
-weather job, then redraw cached data against the current time without waiting for the network. Both respect Android's
+a network-constrained **15-minute JobScheduler job**. Alarms request a weather
+job only when one of the automatic widgets is due, then redraw cached data
+against the current time without waiting for the network. The worker rechecks
+the interval for each widget, so one due widget does not force all the others
+to download data. Both respect Android's
 background scheduling. There are no exact alarms, foreground services,
 persistent notifications or battery-optimization exemptions.
 
@@ -146,7 +166,7 @@ or unlock is delivered and the forecast is due for checking, then immediately
 redraws the cached graph. A waiting ordinary job is promoted; already running
 or expedited work is left alone. If expedited quota is exhausted, an ordinary
 job is scheduled without an added delay. Older Android versions use ordinary
-jobs. Valid HTTP cache entries and retry delays avoid unnecessary wake jobs
+jobs. Selected refresh intervals, valid HTTP cache entries and retry delays avoid unnecessary wake jobs
 when the location is configured and recent.
 The receiver accepts protected unlock broadcasts from System UI's separate
 UID; version 0.1.7 incorrectly rejected those events on phones such as Samsung.
@@ -163,7 +183,8 @@ Actual intervals can be longer under Doze, power saving, launcher suspension
 or manufacturer restrictions. A bitmap already held by a suspended launcher
 cannot age itself: an old graph may remain visible until Android permits the
 next redraw. The settings screen shows the forecast issue time and last
-successful server check. Opening the app and **Refresh now** request an update.
+successful server check. Opening the app checks whether an automatic update is
+due; **Refresh now** requests a manual update.
 
 Automatic updates can be disabled. Cached graphs still redraw on the inexact
 alarm and delivered minute/wake events so their time axis can advance when
@@ -238,7 +259,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.8 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.9 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 

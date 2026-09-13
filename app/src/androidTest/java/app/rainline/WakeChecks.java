@@ -113,6 +113,7 @@ final class WakeChecks {
             jobs.cancelAll();
             Updates.IO.submit(() -> {}).get(5, TimeUnit.SECONDS);
             entry.expiresAt = System.currentTimeMillis() - 1;
+            entry.checkedAt = System.currentTimeMillis() - 5 * Forecast.MINUTE;
             cache.write(key, entry);
             long fetchWakeAt = System.currentTimeMillis();
             int deliveredBefore = delivered.get();

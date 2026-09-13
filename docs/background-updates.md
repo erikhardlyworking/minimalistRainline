@@ -1,6 +1,6 @@
 # Background refresh investigation
 
-Reviewed 13 September 2026 for Rainline 0.1.8.
+Reviewed 14 September 2026 for Rainline 0.1.9.
 
 A graph becoming shorter proves that the cached bitmap was redrawn against
 the current time. It does not prove that Android started a weather job, that
@@ -97,6 +97,31 @@ proof that a particular launcher has painted the image on screen.
   completion and stop. Diagnostics also show Android's pending-job reasons and
   restrictions using the [JobScheduler diagnostics API](https://developer.android.com/reference/android/app/job/JobScheduler#getPendingJobReasons(int)).
   These are fixed local fields, not an uploaded event log.
+
+## Configurable cadence in 0.1.9
+
+Automatic requests now require the widget's selected interval to have elapsed
+since the last successful HTTP check. Defaults are 5 minutes with rain and
+15 minutes when dry; both offer 5, 10, 15, 30 and 60 minutes independently.
+Rain anywhere in the remaining two-hour window selects the rain interval.
+Dry classification requires continuous zero-rate coverage for the next
+90 minutes; missing radar or insufficient near-term coverage stays on the rain
+interval. An old retained forecast can still be drawn during a radar outage,
+while the newest response's radar status controls the request cadence.
+
+The same policy gates normal/wake jobs, periodic worker execution and automatic
+settings refreshes. The worker rechecks after queueing and after resolving the
+location. Each coordinate cache keeps its own last-check time, allowing widgets
+at the same place to reuse a completed request. Different widget intervals
+remain independent. Manual refresh bypasses the app interval, but all requests
+still honour MET's Expires and retry delays as required by its
+[terms](https://docs.api.met.no/doc/TermsOfService).
+
+The existing non-wakeup alarm continues to realign cached graphs. It can check
+whether weather is due without fetching anything. Consequently the configured
+interval is a minimum spacing, not an exact wall-clock schedule; Android's
+[inexact alarm delivery](https://developer.android.com/develop/background-work/services/alarms#inexact)
+can make the actual interval longer.
 
 ## Alternatives and limits
 

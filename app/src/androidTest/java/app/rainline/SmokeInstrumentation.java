@@ -34,6 +34,7 @@ public final class SmokeInstrumentation extends Instrumentation {
             ForecastChecks.run(context);
             SchedulingChecks.run(context);
             LocationChecks.run(context);
+            RefreshChecks.run(context);
             if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();
@@ -86,6 +87,8 @@ public final class SmokeInstrumentation extends Instrumentation {
             runOnMainSync(() -> {
                 android.view.View root = activity.findViewById(android.R.id.content);
                 check(find(root, android.widget.Button.class, "Open Yr") != null, "Open Yr button missing");
+                check(find(root, android.widget.TextView.class, "When rain is forecast") != null, "Rain refresh interval setting missing");
+                check(find(root, android.widget.TextView.class, "When no rain is forecast") != null, "Dry refresh interval setting missing");
                 check(find(root, android.widget.TextView.class, "30 · 60 · 90 minutes  /  small ticks every 5 minutes") == null,
                         "Old time-axis explanatory text must be removed");
             });
