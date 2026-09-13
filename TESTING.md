@@ -62,6 +62,13 @@ without clearing existing widgets or preferences.
   a 90-minute-old saved fix is reused with its real timestamp; a fix older than
   two hours returns the explicit location-stale category and permission guidance.
   Tests do not change the phone's permissions.
+- Verified the 0.1.8 permission setup on the Samsung SM-S938B / Android 16:
+  **Background location → Continue** opens Android's **Location permission**
+  page directly, where **Allow all the time** is available. The fallback
+  **App settings → Permissions → Location** reaches the same page. Both paths
+  were checked without changing the existing **Allow only while using the app**
+  selection. Background access is an option within Location, not a separate
+  item in the permissions list.
 - Native settings checks verify the Open Yr control and removal of the time-axis
   explanation. The settings layout was visually inspected on the emulator.
 - Diagnostic tests use private sentinel values to check that coordinates,
