@@ -31,6 +31,7 @@
     <string name="preview_live">DITT VARSEL · NESTE TO TIMER</string>
     <string name="preview_sample">FORHÅNDSVISNING · EKSEMPEL PÅ REGN</string>
     <string name="preview_description">Eksempel på nedbørsgraf. Kun forhåndsvisning av utseendet.</string>
+    <string name="widget_refresh_help">Trykk på widgeten for å oppdatere den. Strømsparing i Android kan forsinke automatiske oppdateringer, så varselet blir ikke alltid oppdatert med en gang du vekker telefonen.</string>
     <string name="open_yr">Åpne Yr</string>
     <string name="location">Posisjon</string>
     <string name="location_mode">Posisjonsmodus</string>

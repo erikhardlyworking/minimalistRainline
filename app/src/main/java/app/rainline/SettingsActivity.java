@@ -184,6 +184,7 @@ public final class SettingsActivity extends Activity {
                 ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : null;
         small(getString(R.string.forecast_times, UiText.describe(this, forecast == null ? 0 : forecast.updatedAt, shownAt),
                 UiText.describe(this, cached == null ? 0 : cached.checkedAt, shownAt)));
+        small(getString(R.string.widget_refresh_help));
         button(getString(R.string.open_yr), () -> startActivity(new Intent(this, OpenForecastActivity.class)
                 .setAction(OpenForecastActivity.OPEN_YR)), false);
         space(20);

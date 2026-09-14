@@ -32,6 +32,7 @@
     <string name="preview_live">YOUR FORECAST · NEXT TWO HOURS</string>
     <string name="preview_sample">APPEARANCE PREVIEW · SAMPLE RAIN</string>
     <string name="preview_description">Sample precipitation graph. Appearance preview only.</string>
+    <string name="widget_refresh_help">Tap the widget to refresh it. Android’s power saving can delay automatic updates, so the forecast may not update immediately when you wake your phone.</string>
     <string name="open_yr">Open Yr</string>
     <string name="location">Location</string>
     <string name="location_mode">Location mode</string>

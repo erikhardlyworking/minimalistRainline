@@ -31,6 +31,7 @@
     <string name="preview_live">DIN PROGNOSE · NÆSTE TO TIMER</string>
     <string name="preview_sample">FORHÅNDSVISNING · EKSEMPEL PÅ REGN</string>
     <string name="preview_description">Eksempel på nedbørsgraf. Kun forhåndsvisning af udseendet.</string>
+    <string name="widget_refresh_help">Tryk på widgetten for at opdatere den. Strømbesparelse i Android kan forsinke automatiske opdateringer, så prognosen opdateres ikke altid med det samme, når du vækker telefonen.</string>
     <string name="open_yr">Åbn Yr</string>
     <string name="location">Placering</string>
     <string name="location_mode">Placeringstilstand</string>

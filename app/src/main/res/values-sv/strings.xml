@@ -31,6 +31,7 @@
     <string name="preview_live">DIN PROGNOS · NÄRMASTE TVÅ TIMMARNA</string>
     <string name="preview_sample">FÖRHANDSVISNING · EXEMPEL PÅ REGN</string>
     <string name="preview_description">Exempel på nederbördsgraf. Endast förhandsvisning av utseendet.</string>
+    <string name="widget_refresh_help">Tryck på widgeten för att uppdatera den. Androids energisparfunktioner kan fördröja automatiska uppdateringar, så prognosen uppdateras inte alltid direkt när du väcker telefonen.</string>
     <string name="open_yr">Öppna Yr</string>
     <string name="location">Plats</string>
     <string name="location_mode">Platsläge</string>

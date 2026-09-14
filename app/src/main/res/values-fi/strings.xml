@@ -31,6 +31,7 @@
     <string name="preview_live">OMA ENNUSTE · SEURAAVAT KAKSI TUNTIA</string>
     <string name="preview_sample">ULKOASUN ESIKATSELU · ESIMERKKISADE</string>
     <string name="preview_description">Esimerkki sadekäyrästä. Vain ulkoasun esikatselu.</string>
+    <string name="widget_refresh_help">Päivitä widget napauttamalla sitä. Androidin virransäästö voi viivästyttää automaattisia päivityksiä, joten ennuste ei välttämättä päivity heti, kun herätät puhelimen.</string>
     <string name="open_yr">Avaa Yr</string>
     <string name="location">Sijainti</string>
     <string name="location_mode">Sijaintitila</string>

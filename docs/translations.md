@@ -1,6 +1,6 @@
 # Translations
 
-Rainline 0.1.11 uses Android string resources for its interface:
+Rainline 0.1.12 uses Android string resources for its interface:
 
 | Language | Resource directory |
 | --- | --- |
@@ -10,7 +10,7 @@ Rainline 0.1.11 uses Android string resources for its interface:
 | Finnish | `app/src/main/res/values-fi` |
 | Danish | `app/src/main/res/values-da` |
 
-Each translation has 186 entries. `app_name` and the language-neutral timestamp
+Each translation has 187 entries. `app_name` and the language-neutral timestamp
 wrapper are intentionally non-translatable. The original MIT licence and
 technical diagnostic fields remain in English; the diagnostic dialog explains
 this in the selected language. API identifiers, URLs, colour codes and stored

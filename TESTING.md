@@ -1,10 +1,14 @@
 # Testing
 
-Version: 0.1.11. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.12. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
+- 0.1.12: added the tap-to-refresh and power-saving explanation above **Open Yr**
+  in all five languages. Translation completeness (187 entries per translation),
+  debug build, Android lint (no errors) and the existing native language/layout
+  checks passed. The paragraph's placement was visually checked on the emulator.
 - 0.1.11: all 186 translatable resource entries are present in Norwegian Bokmål,
   Swedish, Finnish and Danish, with matching numbered formatting arguments.
   `python3 scripts/check-localizations.py` checks completeness and placeholders.
