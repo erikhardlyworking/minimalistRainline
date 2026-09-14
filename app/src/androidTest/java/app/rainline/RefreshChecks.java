@@ -20,6 +20,9 @@ final class RefreshChecks {
             }
         };
         try {
+            // A prior interrupted run can leave this test's private preferences behind.
+            isolated.getSharedPreferences("widgets", 0).edit().clear().commit();
+            isolated.getSharedPreferences("http-backoff", 0).edit().clear().commit();
             long now = System.currentTimeMillis();
             WidgetSettings dry = new WidgetSettings();
             dry.follow = false; dry.latitude = 59.9139; dry.longitude = 10.7522;
@@ -57,7 +60,10 @@ final class RefreshChecks {
             check(cache.read(key).checkedAt == entry.checkedAt, "Manual refresh ignored server cache expiry");
             check(store.issue(0) == UpdateIssue.NONE, "Manual cached refresh failed");
         } finally {
-            for (String name : new String[]{"widgets", "http-backoff"}) context.deleteSharedPreferences("refresh-checks-" + name);
+            for (String name : new String[]{"widgets", "http-backoff"}) {
+                isolated.getSharedPreferences(name, 0).edit().clear().commit();
+                context.deleteSharedPreferences("refresh-checks-" + name);
+            }
             remove(directory);
         }
     }

@@ -1,6 +1,6 @@
 # Background refresh investigation
 
-Reviewed 14 September 2026 for Rainline 0.1.9.
+Reviewed 14 September 2026; includes the 0.1.10 tap-to-refresh recovery path.
 
 A graph becoming shorter proves that the cached bitmap was redrawn against
 the current time. It does not prove that Android started a weather job, that
@@ -138,7 +138,7 @@ proof that a particular launcher has painted the image on screen.
   a saved fix remains usable within the existing two-hour limit. The settings
   show background-location permission explicitly and explain what disabling it
   means. A fixed place remains the option that needs no location permission.
-- Make a widget tap open its settings and foreground refresh path. Show the
+- In 0.1.7–0.1.9, a widget tap opens settings and its foreground refresh path. Show the
   actual forecast issue time and last server-check time, both with elapsed age.
 - Keep local timestamps for the latest received wake, queued job, start,
   completion and stop. Diagnostics also show Android's pending-job reasons and
@@ -171,6 +171,33 @@ interval is a minimum spacing, not an exact wall-clock schedule; Android's
 can make the actual interval longer.
 
 ## Alternatives and limits
+
+### Manual recovery in 0.1.10
+
+Tapping now sends an explicit, foreground-priority broadcast PendingIntent
+to Rainline's non-exported receiver. It realigns the graph and schedules an
+expedited manual job for the tapped widget, with a regular fallback if quota
+is unavailable. An existing pending expedited job is reused. Manual jobs are
+independent of automatic-update settings and jobs; the worker still observes
+the awake/unlocked gate, location permissions, MET cache and retry delays.
+Location/HTTP work runs in JobService rather than extending the broadcast
+receiver's lifetime. This follows Android's
+[widget interaction guidance](https://developer.android.com/develop/ui/views/appwidgets/advanced#update-in-response-to-a-user-interaction).
+
+With the Samsung process confirmed cached and frozen before a tap, the actual
+widget action completed a refresh and submitted a graph in about 0.4 seconds,
+with the launcher still focused. The last widget tap is recorded in local
+diagnostics. This verifies manual recovery; it does not change the automatic
+unlock delivery limitation described above. A completed refresh can reuse
+MET's valid cache rather than downloading another response.
+
+The unavailable indicator is a circular refresh arrow, while an open ring
+still means waiting. Settings use the launcher's existing touch-and-hold
+reconfiguration control or the app icon. The Android
+[reconfiguration flag](https://developer.android.com/develop/ui/compose/glance/configuration#enable-users-to-reconfigure-placed-widgets)
+is already declared; launchers control how that affordance appears.
+
+### Automatic recovery alternatives
 
 Replacing JobScheduler with WorkManager would not remove the relevant Doze or
 standby limits: WorkManager uses JobScheduler for this work. See

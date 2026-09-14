@@ -19,14 +19,17 @@ public final class RefreshJobService extends JobService {
         running.put(params.getJobId(), run);
         activeJobs.add(params.getJobId());
         UpdateDiagnostics.event(this, "started");
-        run.future = Updates.refreshWidgets(this, () -> {
+        Runnable completed = () -> {
             // A cancelled job may finish after its replacement has already started.
             if (running.get(params.getJobId()) != run) return;
             running.remove(params.getJobId());
             activeJobs.remove(params.getJobId());
             UpdateDiagnostics.event(this, "completed");
             jobFinished(params, false);
-        });
+        };
+        int manualWidget = params.getExtras().getInt(Updates.MANUAL_WIDGET, 0);
+        run.future = manualWidget > 0 ? Updates.refreshWidget(this, manualWidget, completed)
+                : Updates.refreshWidgets(this, completed);
         return true;
     }
     @Override public boolean onStopJob(JobParameters params) {

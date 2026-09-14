@@ -1,10 +1,32 @@
 # Testing
 
-Version: 0.1.9. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.10. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
+- 0.1.10: on the Samsung S25 Ultra, Rainline was confirmed cached and frozen
+  immediately before tapping the widget. The tap was received, a refresh
+  completed with no error, and a graph was submitted in about 0.4 seconds.
+  Samsung's launcher remained the focused activity. This verifies recovery
+  from a user tap, not automatic recovery after unlock or a new HTTP download
+  when MET's cache is still valid.
+- On Samsung, touch and hold → **Settings** opened Rainline's **Configure the
+  widget** screen. Returning went back to the home screen without changing
+  widget settings or layout.
+- 0.1.10 emulator integration sends the actual widget PendingIntent through
+  the receiver and JobService. A manual refresh completes with automatic
+  updates disabled, leaves a second widget untouched, honours the valid HTTP
+  cache, submits the graph and clears its pending state. Invalid widget IDs
+  are ignored. Native scheduler checks cover manual quota fallback, repeated
+  tap coalescing and independent widget requests. Run the native suite with
+  `-e tap true` on an unlocked emulator without existing Rainline widgets.
+- The refresh-arrow rendering was inspected using the actual Canvas output.
+  Both loading and retry remain visible with all axes hidden, have empty
+  centres and differ visually. Accessibility describes the new tap action.
+  The native suite passed after clearing stale preferences left in the
+  interval test's isolated storage by an earlier run; setup and cleanup now
+  explicitly clear only that test's preference files.
 - Additional standby investigation on 14 September, using the unchanged
   0.1.9 APK: the Samsung's broadcast queue held `USER_PRESENT` for over three
   minutes while Rainline was frozen by MARs. Background location was granted.
@@ -60,7 +82,7 @@ without clearing existing widgets or preferences.
   warning on 200, and 429 backoff across locations. No user cache is replaced
   by these simulated responses.
 - Native rendering checks cover a 31-minute-old forecast shifted to now,
-  the missing end of the two-hour axis, distinct open-ring/cross indicators,
+  the missing end of the two-hour axis, distinct open-ring/refresh-arrow indicators,
   and accessibility descriptions. A labelled rendering of these states was
   visually inspected.
 - HTTP/cache checks also verify retaining useful samples through a radar-outage
@@ -117,8 +139,10 @@ without clearing existing widgets or preferences.
    colour. Also try Content padding on each edge and Background colour with the picker,
    hex entry and opacity. Existing colours remain saved; use Transparent and
    Apply to clear an existing background. Check that Apply updates the selected widget.
-3. Tap the placed widget and check that its settings open. Check the forecast
-   update/check timestamps and elapsed ages below the graph, then tap **Open Yr**.
+3. Tap the placed widget and check that it refreshes without leaving the home
+   screen. Long-press and choose **Settings/Reconfigure**, or open Rainline.
+   Check the forecast update/check timestamps and elapsed ages below the graph,
+   then tap **Open Yr**.
 4. In follow mode, check **Background location → Status: enabled/disabled**.
    Tap Continue and choose **Allow all the time** on Android's Location page.
    Background access is inside the Location permission group, not a separate
@@ -134,11 +158,12 @@ without clearing existing widgets or preferences.
 6. Leave the phone asleep for over 20 minutes, then unlock it. Check that the
    graph advances to now and still shows remaining cached data while refreshing.
    With no upcoming cached data, expect an open ring until a result arrives;
-   a failed refresh with no usable cache should show ×. Android may postpone
+   a failed refresh with no usable cache should show a circular refresh arrow.
+   Tap to retry without opening settings. Android may postpone
    wake events and updates under power saving or while the app is suspended.
 7. Check errors in **Forecast status** if coverage or connectivity is missing.
    A dotted axis interval is unknown and a solid flat forecast is dry. An open
-   ring means waiting for data; × means data could not be obtained. A usable
+   ring means waiting for data; a refresh arrow means data could not be obtained. A usable
    cached graph remains visible even if the latest refresh fails.
 8. Open **About → Diagnostics**, inspect the summary, and try Copy if you want
    to paste the technical details into a support request. For wake problems,

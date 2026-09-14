@@ -39,6 +39,20 @@ final class SchedulingChecks {
             jobs.current = null; jobs.attempts.clear(); jobs.rejectAll = true;
             Updates.scheduleRefresh(isolated, jobs, true);
             check(UpdateDiagnostics.outcome(isolated).equals("rejected"), "Scheduling failure must be visible in diagnostics");
+
+            jobs.current = null; jobs.attempts.clear(); jobs.rejectAll = false; jobs.rejectExpedited = true;
+            Updates.scheduleRefresh(isolated, jobs, true, 42);
+            check(jobs.attempts.size() == 2, "A widget tap needs the same quota fallback");
+            check(jobs.current.getId() == Updates.manualJobId(42)
+                    && jobs.current.getExtras().getInt(Updates.MANUAL_WIDGET) == 42,
+                    "Quota fallback lost the tapped widget or manual refresh intent");
+            jobs.rejectExpedited = false; jobs.attempts.clear();
+            Updates.scheduleRefresh(isolated, jobs, true, 42);
+            Updates.scheduleRefresh(isolated, jobs, true, 42);
+            check(jobs.attempts.size() == 1 && jobs.current.isExpedited(), "Repeated taps must coalesce");
+            Updates.scheduleRefresh(isolated, jobs, true, 43);
+            check(jobs.attempts.size() == 2 && jobs.current.getExtras().getInt(Updates.MANUAL_WIDGET) == 43,
+                    "Tapping another widget must not reuse the first widget's request");
         } finally { context.deleteSharedPreferences("scheduling-checks-update-diagnostics"); }
     }
     private static final class FakeScheduler extends JobScheduler {
@@ -50,7 +64,7 @@ final class SchedulingChecks {
             if (rejectAll || (rejectExpedited && job.isExpedited())) return RESULT_FAILURE;
             current = job; return RESULT_SUCCESS;
         }
-        @Override public JobInfo getPendingJob(int id) { return current; }
+        @Override public JobInfo getPendingJob(int id) { return current != null && current.getId() == id ? current : null; }
         @Override public List<JobInfo> getAllPendingJobs() { return current == null ? List.of() : List.of(current); }
         @Override public void cancel(int id) { current = null; }
         @Override public void cancelAll() { current = null; }

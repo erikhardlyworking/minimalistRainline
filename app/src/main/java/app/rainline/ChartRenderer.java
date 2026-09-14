@@ -132,12 +132,22 @@ public final class ChartRenderer {
             float y = (top + base) / 2;
             p.setColor(Color.WHITE);
             p.setStrokeWidth(.8f * dp);
+            p.setStyle(Paint.Style.STROKE);
             if (state == ForecastState.UNAVAILABLE) {
-                canvas.drawLine(x - 2.5f * dp, y - 2.5f * dp, x + 2.5f * dp, y + 2.5f * dp, p);
-                canvas.drawLine(x - 2.5f * dp, y + 2.5f * dp, x + 2.5f * dp, y - 2.5f * dp, p);
+                // Clockwise refresh arrow: a clear retry affordance, distinct from loading.
+                float radius = 6 * dp;
+                canvas.drawArc(x - radius, y - radius, x + radius, y + radius, 35, 285, false, p);
+                double angle = Math.toRadians(320);
+                float endX = x + radius * (float) Math.cos(angle);
+                float endY = y + radius * (float) Math.sin(angle);
+                float tangentX = -(float) Math.sin(angle), tangentY = (float) Math.cos(angle);
+                float wing = 2.6f * dp;
+                canvas.drawLine(endX, endY, endX - wing * tangentX + wing * tangentY,
+                        endY - wing * tangentY - wing * tangentX, p);
+                canvas.drawLine(endX, endY, endX - wing * tangentX - wing * tangentY,
+                        endY - wing * tangentY + wing * tangentX, p);
             } else {
                 // An open ring reads as loading without requiring an animation or extra wakeups.
-                p.setStyle(Paint.Style.STROKE);
                 canvas.drawArc(x - 4 * dp, y - 4 * dp, x + 4 * dp, y + 4 * dp, -60, 280, false, p);
             }
         }

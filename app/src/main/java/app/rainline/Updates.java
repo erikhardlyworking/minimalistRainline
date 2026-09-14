@@ -31,10 +31,25 @@ public final class Updates {
     private static final Set<Integer> inFlight = ConcurrentHashMap.newKeySet();
     private static final int PERIODIC_JOB = 1101, IMMEDIATE_JOB = 1102;
     private static final String REQUESTED_AT = "requestedAt";
+    static final String MANUAL_WIDGET = "manualWidget";
     private Updates() {}
 
     public static int[] widgetIds(Context context) {
         return AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, RainWidgetProvider.class));
+    }
+    static boolean isOurWidget(Context context, int id) {
+        if (id <= 0) return false;
+        android.appwidget.AppWidgetProviderInfo info = AppWidgetManager.getInstance(context).getAppWidgetInfo(id);
+        return info != null && new ComponentName(context, RainWidgetProvider.class).equals(info.provider);
+    }
+    // Automatic jobs have positive IDs; each placed widget owns one negative manual job ID.
+    static int manualJobId(int widgetId) { return -widgetId; }
+    static void cancelManualRefresh(Context context, int id) {
+        if (id > 0) context.getSystemService(JobScheduler.class).cancel(manualJobId(id));
+    }
+    static void enqueueManual(Context context, int id) {
+        if (!isOurWidget(context, id) || !deviceActive(context)) return;
+        scheduleRefresh(context, context.getSystemService(JobScheduler.class), true, id);
     }
     public static void schedule(Context context) {
         int[] ids = widgetIds(context);
@@ -69,26 +84,32 @@ public final class Updates {
         scheduleRefresh(context, jobs, prompt);
     }
     static void scheduleRefresh(Context context, JobScheduler jobs, boolean prompt) {
-        JobInfo existing = jobs.getPendingJob(IMMEDIATE_JOB);
-        if (existing != null && (!prompt || RefreshJobService.isRunning(IMMEDIATE_JOB)
+        scheduleRefresh(context, jobs, prompt, 0);
+    }
+    static void scheduleRefresh(Context context, JobScheduler jobs, boolean prompt, int manualWidgetId) {
+        int jobId = manualWidgetId > 0 ? manualJobId(manualWidgetId) : IMMEDIATE_JOB;
+        JobInfo existing = jobs.getPendingJob(jobId);
+        if (existing != null && (!prompt || RefreshJobService.isRunning(jobId)
                 || (Build.VERSION.SDK_INT >= 31 && existing.isExpedited()))) return;
         // Replace an ordinary queued job on wake. Leaving it in place would retain its delays.
-        JobInfo request = refreshJob(context, prompt);
+        JobInfo request = refreshJob(context, prompt, prompt && Build.VERSION.SDK_INT >= 31, manualWidgetId);
         int result = jobs.schedule(request);
         String outcome = prompt && Build.VERSION.SDK_INT >= 31 ? "expedited" : "regular";
         if (result == JobScheduler.RESULT_FAILURE && prompt && Build.VERSION.SDK_INT >= 31) {
-            result = jobs.schedule(refreshJob(context, true, false));
+            result = jobs.schedule(refreshJob(context, true, false, manualWidgetId));
             outcome = "regular_after_expedited_quota";
         }
         UpdateDiagnostics.scheduled(context, result == JobScheduler.RESULT_SUCCESS ? outcome : "rejected");
     }
     static JobInfo refreshJob(Context context, boolean prompt) {
-        return refreshJob(context, prompt, prompt && Build.VERSION.SDK_INT >= 31);
+        return refreshJob(context, prompt, prompt && Build.VERSION.SDK_INT >= 31, 0);
     }
-    private static JobInfo refreshJob(Context context, boolean prompt, boolean expedited) {
+    private static JobInfo refreshJob(Context context, boolean prompt, boolean expedited, int manualWidgetId) {
         PersistableBundle extras = new PersistableBundle();
         extras.putLong(REQUESTED_AT, System.currentTimeMillis());
-        JobInfo.Builder job = new JobInfo.Builder(IMMEDIATE_JOB, new ComponentName(context, RefreshJobService.class))
+        extras.putInt(MANUAL_WIDGET, manualWidgetId);
+        int jobId = manualWidgetId > 0 ? manualJobId(manualWidgetId) : IMMEDIATE_JOB;
+        JobInfo.Builder job = new JobInfo.Builder(jobId, new ComponentName(context, RefreshJobService.class))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setExtras(extras)
                 .setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
@@ -122,10 +143,27 @@ public final class Updates {
     public static boolean pending(Context context, int id) {
         if (settingsRefreshId == id || inFlight.contains(id)) return true;
         SettingsStore store = new SettingsStore(context);
-        if (!store.get(id).automatic || !deviceActive(context)) return false;
-        JobInfo queued = context.getSystemService(JobScheduler.class).getPendingJob(IMMEDIATE_JOB);
+        if (!deviceActive(context)) return false;
+        JobScheduler jobs = context.getSystemService(JobScheduler.class);
+        JobInfo manual = id > 0 ? jobs.getPendingJob(manualJobId(id)) : null;
+        if (manual != null && manual.getExtras().getLong(REQUESTED_AT) > store.attemptedAt(id)) return true;
+        if (!store.get(id).automatic) return false;
+        JobInfo queued = jobs.getPendingJob(IMMEDIATE_JOB);
         // A completed failure must be shown even while its JobService is finishing.
         return queued != null && queued.getExtras().getLong(REQUESTED_AT) > store.attemptedAt(id);
+    }
+    static Future<?> refreshWidget(Context context, int id, Runnable completed) {
+        Context app = context.getApplicationContext();
+        return IO.submit(() -> {
+            try {
+                // A tap is manual even with automatic updates disabled. Location access
+                // remains background access because no activity has been opened.
+                if (isOurWidget(app, id) && deviceActive(app)) refreshOne(app, id, false, true);
+            } finally {
+                RainWidgetProvider.render(app, id);
+                new Handler(Looper.getMainLooper()).post(completed);
+            }
+        });
     }
     public static Future<?> refreshWidgets(Context context, Runnable completed) {
         Context app = context.getApplicationContext();

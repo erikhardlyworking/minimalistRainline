@@ -26,13 +26,16 @@ final class ForecastChecks {
         Bitmap loading = ChartRenderer.bitmap(240, 96, 2, settings, null, now, ForecastState.LOADING);
         Bitmap error = ChartRenderer.bitmap(240, 96, 2, settings, null, now, ForecastState.UNAVAILABLE);
         check(Color.alpha(loading.getPixel(240, 96)) == 0, "Loading ring must have an empty centre");
-        check(Color.alpha(error.getPixel(240, 96)) > 0, "Unavailable cross must remain visible");
+        check(Color.alpha(error.getPixel(240, 96)) == 0, "Refresh arrow must have an empty centre");
+        check(hasInk(error, 224, 256), "Refresh arrow must remain visible without axes");
         check(hasInk(loading, 230, 250), "Loading indicator must be visible without axes");
         check(!loading.sameAs(error), "Waiting and failed states must look different");
         check(RainWidgetProvider.description(settings, old, now, state).contains("stored forecast"),
                 "Accessibility must describe retained data");
         check(RainWidgetProvider.description(settings, null, now, ForecastState.LOADING).startsWith("Waiting"),
                 "Loading accessibility description must not say unavailable");
+        check(RainWidgetProvider.description(settings, null, now, ForecastState.UNAVAILABLE).contains("Tap to refresh"),
+                "Refresh arrow must describe its action");
 
         JobInfo wake = Updates.refreshJob(context, true);
         JobInfo routine = Updates.refreshJob(context, false);
@@ -54,7 +57,7 @@ final class ForecastChecks {
         text.setColor(Color.WHITE); text.setTextSize(28);
         settings.showAxis = settings.showTicks = settings.labels = true;
         settings.paddingLeft = settings.paddingRight = 8; settings.paddingTop = 9; settings.paddingBottom = 1;
-        String[] labels = {"Stored forecast, 31 minutes old", "Waiting for data", "Data could not be obtained"};
+        String[] labels = {"Stored forecast, 31 minutes old", "Waiting for data", "Data unavailable: tap to refresh"};
         ForecastState[] states = {ForecastState.DATA, ForecastState.LOADING, ForecastState.UNAVAILABLE};
         for (int i = 0; i < states.length; i++) {
             canvas.drawText(labels[i], 24, 36 + i * 360, text);

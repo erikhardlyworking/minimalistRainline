@@ -12,12 +12,13 @@ import java.io.FileOutputStream;
 
 /** Device tests with Android's own instrumentation; no test SDK in the app. */
 public final class SmokeInstrumentation extends Instrumentation {
-    private boolean live, wake, wakeOnly;
+    private boolean live, wake, wakeOnly, tap;
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         live = arguments != null && "true".equals(arguments.getString("live"));
         wake = arguments != null && "true".equals(arguments.getString("wake"));
         wakeOnly = arguments != null && "true".equals(arguments.getString("wakeOnly"));
+        tap = arguments != null && "true".equals(arguments.getString("tap"));
         start();
     }
     @Override public void onStart() {
@@ -35,6 +36,7 @@ public final class SmokeInstrumentation extends Instrumentation {
             SchedulingChecks.run(context);
             LocationChecks.run(context);
             RefreshChecks.run(context);
+            if (tap) TapChecks.run(this, context);
             if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();

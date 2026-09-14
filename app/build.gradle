@@ -10,8 +10,8 @@ android {
         applicationId 'app.rainline'
         minSdk 26
         targetSdk 36
-        versionCode 10
-        versionName '0.1.9'
+        versionCode 11
+        versionName '0.1.10'
         testInstrumentationRunner 'app.rainline.SmokeInstrumentation'
         buildConfigField 'String', 'MET_CONTACT', quoted(providers.gradleProperty('metContact').getOrElse('https://github.com/erikhardlyworking/minimalistRainline'))
         buildConfigField 'String', 'SOURCE_URL', quoted(providers.gradleProperty('sourceUrl').getOrElse('https://github.com/erikhardlyworking/minimalistRainline'))

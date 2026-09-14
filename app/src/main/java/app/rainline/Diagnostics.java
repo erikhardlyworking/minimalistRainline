@@ -108,6 +108,7 @@ public final class Diagnostics {
         }
         line(out, "Last screen-on received", age(UpdateDiagnostics.at(context, "screenOn"), now));
         line(out, "Last unlock received", age(UpdateDiagnostics.at(context, "unlock"), now));
+        line(out, "Last widget tap received", age(UpdateDiagnostics.at(context, "widgetTap"), now));
         line(out, "Last alarm/system event", age(UpdateDiagnostics.at(context, "alarmOrSystemEvent"), now));
         line(out, "Last job scheduled", age(UpdateDiagnostics.at(context, "scheduled"), now));
         line(out, "Scheduling result", UpdateDiagnostics.outcome(context));

@@ -36,8 +36,10 @@ Android can throttle background location even when permission is enabled;
 Rainline reuses recent fixes and keeps the existing two-hour age limit.
 Approximate location works, but precise location is preferable for local radar.
 
-Tap the widget to open its Rainline settings and foreground refresh path.
-Below the graph, **Forecast updated** and **Last checked** show their times and
+Tap the widget to refresh it in place. Touch and hold it, then choose the
+launcher's **Settings/Reconfigure** button to configure it; this path was
+verified on the Samsung S25 Ultra. Opening the Rainline app also opens settings.
+In settings, below the graph, **Forecast updated** and **Last checked** show their times and
 elapsed ages. **Open Yr** opens the installed Yr app (no.nrk.yr), with the Yr
 website as a fallback. Widget setup is labelled **Configure the widget**.
 
@@ -60,7 +62,8 @@ website as a fallback. Widget setup is labelled **Configure the widget**.
   past samples drop off and missing future intervals remain empty. There is
   no fixed 20-minute cutoff.
 - A small **open ring** means waiting for data when no usable forecast remains.
-  **×** means data could not be obtained, including location or radar problems.
+  A **circular refresh arrow** means data could not be obtained, including
+  location or radar problems. Tap anywhere on the widget to retry.
   A failed refresh does not add an error marker over a usable cached graph.
   Open Rainline's forecast status for details.
 - If MET reports a radar outage, the cache retains the previous useful forecast
@@ -145,6 +148,10 @@ and apply to scheduled jobs, wake/unlock events and automatic refreshes while
 settings are open. MET's Expires and retry delays can postpone a request further.
 **Refresh now** can check before the chosen interval, while still honouring MET's
 cache and retry rules. Graph redraws do not reset the interval or download data.
+Tapping a widget also requests a manual refresh, even if automatic updates are
+disabled. It targets that widget, coalesces repeated pending taps, and keeps
+following-location permission requirements unchanged. A tap does not open an
+activity or grant foreground location access.
 
 Rainline combines a best-effort five-to-six-minute **non-wakeup, inexact alarm** with
 a network-constrained **15-minute JobScheduler job**. Alarms request a weather
@@ -262,7 +269,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.9 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.10 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 
