@@ -148,17 +148,17 @@ public final class SettingsActivity extends Activity {
         TextView title = text("Rainline", 32);
         title.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         content.addView(title);
-        TextView subtitle = text(configuring ? "Configure the widget" : "Widget settings", 14);
+        TextView subtitle = text(configuring ? getString(R.string.configure_widget) : getString(R.string.widget_settings), 14);
         subtitle.setPadding(0, dp(3), 0, dp(22));
         content.addView(subtitle);
 
         if (!configuring && Updates.widgetIds(this).length > 0) {
-            row("Editing", widgetId == 0 ? "Defaults for new widgets" : widgetLabel(widgetId), this::chooseWidget);
+            row(getString(R.string.editing), widgetId == 0 ? getString(R.string.widget_defaults) : widgetLabel(widgetId), this::chooseWidget);
             space(12);
         }
         boolean live = ForecastWindow.hasUpcomingData(forecast, System.currentTimeMillis())
                 && !settings.locationExpired(System.currentTimeMillis());
-        TextView previewLabel = text(live ? "YOUR FORECAST · NEXT TWO HOURS" : "APPEARANCE PREVIEW · SAMPLE RAIN", 10);
+        TextView previewLabel = text(live ? getString(R.string.preview_live) : getString(R.string.preview_sample), 10);
         previewLabel.setLetterSpacing(.10f);
         content.addView(previewLabel);
         View preview = new View(this) {
@@ -176,45 +176,45 @@ public final class SettingsActivity extends Activity {
                         appearance, current, now, ForecastState.DATA);
             }
         };
-        preview.setContentDescription(live ? RainWidgetProvider.description(settings, forecast,
-                System.currentTimeMillis(), ForecastState.DATA) : "Sample precipitation graph. Appearance preview only.");
+        preview.setContentDescription(live ? RainWidgetProvider.description(this, settings, forecast,
+                System.currentTimeMillis(), ForecastState.DATA) : getString(R.string.preview_description));
         content.addView(preview, new LinearLayout.LayoutParams(-1, dp(146)));
         long shownAt = System.currentTimeMillis();
         ForecastCache.Entry cached = settings.hasLocation() ? new ForecastCache(this).read(
                 ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : null;
-        small("Forecast updated: " + ForecastTimes.describe(forecast == null ? 0 : forecast.updatedAt, shownAt)
-                + "\nLast checked: " + ForecastTimes.describe(cached == null ? 0 : cached.checkedAt, shownAt));
-        button("Open Yr", () -> startActivity(new Intent(this, OpenForecastActivity.class)
+        small(getString(R.string.forecast_times, UiText.describe(this, forecast == null ? 0 : forecast.updatedAt, shownAt),
+                UiText.describe(this, cached == null ? 0 : cached.checkedAt, shownAt)));
+        button(getString(R.string.open_yr), () -> startActivity(new Intent(this, OpenForecastActivity.class)
                 .setAction(OpenForecastActivity.OPEN_YR)), false);
         space(20);
 
-        section("Location");
-        row("Location mode", settings.follow ? "Follow my location" : "Use a fixed place", this::chooseLocationMode);
+        section(getString(R.string.location));
+        row(getString(R.string.location_mode), settings.follow ? getString(R.string.follow_location) : getString(R.string.fixed_place_mode), this::chooseLocationMode);
         if (settings.follow) {
-            row("Current location", locationLabel(settings), this::locate);
-            row("Background location", LocationAccess.backgroundAllowed(this) ? "Status: enabled"
-                    : "Status: disabled\nTap to enable following from the home screen", this::backgroundLocation);
+            row(getString(R.string.current_location), locationLabel(settings), this::locate);
+            row(getString(R.string.background_location), LocationAccess.backgroundAllowed(this) ? getString(R.string.enabled)
+                    : getString(R.string.background_disabled), this::backgroundLocation);
             if (!LocationAccess.backgroundAllowed(this))
-                small("Without background access, the saved position is used for up to two hours. After that, open Rainline for a fresh position or use a fixed place. A fixed place updates without location permission.");
+                small(getString(R.string.background_limit));
         } else {
-            row("Fixed place", settings.hasLocation() ? locationLabel(settings) : "Choose a place", this::findPlace);
+            row(getString(R.string.fixed_place), settings.hasLocation() ? locationLabel(settings) : getString(R.string.choose_place), this::findPlace);
         }
         if (settings.follow && settings.accuracy > 2000)
-            small("This location is approximate. Precise location gives a more local rain forecast.");
+            small(getString(R.string.approximate_location));
 
-        section("Appearance");
-        row("Rainfall scale and highlight", "Ceiling " + AppearanceDialogs.rateLabel(settings.scaleMax) + " mm/h · "
-                + (settings.highlightRain ? "highlight from " + AppearanceDialogs.rateLabel(settings.highlightThreshold) + " mm/h" : "highlight off"), () ->
+        section(getString(R.string.appearance));
+        row(getString(R.string.rainfall_scale), getString(R.string.rainfall_summary, UiText.rate(this, settings.scaleMax),
+                settings.highlightRain ? getString(R.string.highlight_from, UiText.rate(this, settings.highlightThreshold)) : getString(R.string.highlight_off)), () ->
                 AppearanceDialogs.rainfall(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId);
                     s.scaleMax = draft.scaleMax; s.highlightThreshold = draft.highlightThreshold; s.highlightRain = draft.highlightRain;
                     saveSettings(s);
                 }));
-        row("Rain highlight colour", ColorValue.format(settings.highlightColor), () ->
+        row(getString(R.string.highlight_colour), ColorValue.format(settings.highlightColor), () ->
                 AppearanceDialogs.highlightColour(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId); s.highlightColor = draft.highlightColor; saveSettings(s);
                 }));
-        row("Content padding", String.format(Locale.getDefault(), "Left %d · top %d · right %d · bottom %d dp",
+        row(getString(R.string.content_padding), getString(R.string.padding_summary,
                 settings.paddingLeft, settings.paddingTop, settings.paddingRight, settings.paddingBottom), () ->
                 AppearanceDialogs.padding(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId);
@@ -222,62 +222,67 @@ public final class SettingsActivity extends Activity {
                     s.paddingRight = draft.paddingRight; s.paddingBottom = draft.paddingBottom;
                     saveSettings(s);
                 }));
-        row("Background colour", ColorValue.format(settings.backgroundColor), () ->
+        row(getString(R.string.background_colour), ColorValue.format(settings.backgroundColor), () ->
                 AppearanceDialogs.background(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId); s.backgroundColor = draft.backgroundColor; saveSettings(s);
                 }));
-        row("Horizontal guides", new String[]{"Light grey", "White", "Hidden"}[settings.guides], () ->
-                choices("Horizontal guides", new String[]{"Light grey", "White", "Hidden"}, settings.guides, chosen -> {
+        row(getString(R.string.horizontal_guides), new String[]{getString(R.string.light_grey), getString(R.string.white), getString(R.string.hidden)}[settings.guides], () ->
+                choices(getString(R.string.horizontal_guides), new String[]{getString(R.string.light_grey), getString(R.string.white), getString(R.string.hidden)}, settings.guides, chosen -> {
                     WidgetSettings s = store.get(widgetId); s.guides = chosen; saveSettings(s);
                 }));
-        row("Forecast line", settings.normalLine ? "Normal" : "Thin", () ->
-                choices("Forecast line", new String[]{"Thin", "Normal"}, settings.normalLine ? 1 : 0, chosen -> {
+        row(getString(R.string.forecast_line), settings.normalLine ? getString(R.string.normal) : getString(R.string.thin), () ->
+                choices(getString(R.string.forecast_line), new String[]{getString(R.string.thin), getString(R.string.normal)}, settings.normalLine ? 1 : 0, chosen -> {
                     WidgetSettings s = store.get(widgetId); s.normalLine = chosen == 1; saveSettings(s);
                 }));
         List<String> axisParts = new ArrayList<>();
-        if (settings.showAxis) axisParts.add("Line");
-        if (settings.showTicks) axisParts.add("Ticks");
-        if (settings.labels) axisParts.add("Numbers · size " + settings.labelSize);
-        row("Time axis", axisParts.isEmpty() ? "Hidden" : String.join(" · ", axisParts), () ->
+        if (settings.showAxis) axisParts.add(getString(R.string.line));
+        if (settings.showTicks) axisParts.add(getString(R.string.ticks));
+        if (settings.labels) axisParts.add(getString(R.string.numbers_size, settings.labelSize));
+        row(getString(R.string.time_axis), axisParts.isEmpty() ? getString(R.string.hidden) : String.join(" · ", axisParts), () ->
                 AppearanceDialogs.timeAxis(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId);
                     s.labels = draft.labels; s.labelSize = draft.labelSize; s.showAxis = draft.showAxis; s.showTicks = draft.showTicks;
                     saveSettings(s);
                 }));
-        small("The rainfall scale is 0–" + AppearanceDialogs.rateLabel(settings.scaleMax) + " mm/h. Guides mark "
-                + AppearanceDialogs.rateLabel(settings.scaleMax / 3.0) + " and " + AppearanceDialogs.rateLabel(settings.scaleMax * 2.0 / 3)
-                + " mm/h; a small upward mark means rain exceeds the scale.");
+        small(getString(R.string.scale_help, UiText.rate(this, settings.scaleMax),
+                UiText.rate(this, settings.scaleMax / 3.0), UiText.rate(this, settings.scaleMax * 2.0 / 3)));
 
-        section("Updates");
-        row("Automatic updates", settings.automatic ? "Status: enabled" : "Status: disabled", () -> {
+        section(getString(R.string.updates));
+        row(getString(R.string.automatic_updates), settings.automatic ? getString(R.string.enabled) : getString(R.string.disabled), () -> {
             WidgetSettings s = store.get(widgetId); s.automatic = !s.automatic; saveSettings(s);
             Updates.schedule(this);
             if (s.automatic) refresh(false);
         });
-        row("When rain is forecast", "Every " + settings.rainRefreshMinutes + " minutes", () -> refreshInterval(true));
-        row("When no rain is forecast", "Every " + settings.dryRefreshMinutes + " minutes", () -> refreshInterval(false));
-        row("Forecast status", status(settings, forecast), () -> new AlertDialog.Builder(this)
-                .setTitle("Forecast status").setMessage(status(settings, forecast)
-                        + "\n\nA dotted part of the axis has no forecast data. An open ring means waiting for data; × means data could not be obtained."
-                        + "\n\nStored forecasts stay visible while they contain any valid intervals in the next 90 minutes. The two-hour axis advances with the current time, leaving missing intervals empty.")
-                .setPositiveButton("OK", null).show());
-        Button refresh = button(Updates.busy() ? "Updating…" : "Refresh now", () -> refresh(true), false);
+        row(getString(R.string.rain_interval), getString(R.string.every_minutes, settings.rainRefreshMinutes), () -> refreshInterval(true));
+        row(getString(R.string.dry_interval), getString(R.string.every_minutes, settings.dryRefreshMinutes), () -> refreshInterval(false));
+        row(getString(R.string.forecast_status), status(settings, forecast), () -> new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.forecast_status)).setMessage(status(settings, forecast)
+                        + "\n\n" + getString(R.string.status_help))
+                .setPositiveButton(getString(R.string.ok), null).show());
+        Button refresh = button(Updates.busy() ? getString(R.string.updating) : getString(R.string.refresh_now), () -> refresh(true), false);
         refresh.setEnabled(!Updates.busy());
-        small("Rain anywhere in the next two hours uses the rain interval. The slower dry interval needs at least 90 minutes of continuous dry data; missing data uses the rain interval. Intervals start at the last successful server check and also apply after wake or unlock. The graph can advance without downloading data. Updates pause while locked or asleep, and Android may delay them. Refresh now checks sooner while respecting the weather service’s cache.");
+        small(getString(R.string.updates_help));
 
-        section("About");
-        row("Weather data", "MET Norway · CC BY 4.0", () -> new AlertDialog.Builder(this)
-                .setTitle("Weather data")
-                .setMessage("Based on data from MET Norway, licensed under Creative Commons Attribution 4.0.\n\nRainline draws the precipitation rates as a line, interpolates between samples, and crops the forecast to the next two hours. It is an independent app and is not endorsed by MET Norway, Yr or NRK.")
-                .setPositiveButton("Data source", (d, which) -> openLink("https://api.met.no/weatherapi/nowcast/2.0/documentation"))
-                .setNeutralButton("Licence", (d, which) -> openLink("https://creativecommons.org/licenses/by/4.0/"))
-                .setNegativeButton("Close", null).show());
-        row("Privacy", "No ads, analytics or accounts", this::privacy);
-        row("Diagnostics", "Preview and copy a local summary", () -> Diagnostics.show(this, widgetId, widgetBeforeRefresh));
-        row("Open source", "MIT licence · Version " + BuildConfig.VERSION_NAME, this::aboutSource);
+        section(getString(R.string.about));
+        if (Build.VERSION.SDK_INT >= 33) {
+            boolean systemLanguage = getSystemService(android.app.LocaleManager.class).getApplicationLocales().isEmpty();
+            row(getString(R.string.language), systemLanguage ? getString(R.string.system_language)
+                    : UiText.locale(this).getDisplayName(UiText.locale(this)), () ->
+                    startActivity(new Intent(Settings.ACTION_APP_LOCALE_SETTINGS,
+                            Uri.parse("package:" + getPackageName()))));
+        }
+        row(getString(R.string.weather_data), "MET Norway · CC BY 4.0", () -> new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.weather_data))
+                .setMessage(getString(R.string.attribution))
+                .setPositiveButton(getString(R.string.data_source), (d, which) -> openLink("https://api.met.no/weatherapi/nowcast/2.0/documentation"))
+                .setNeutralButton(getString(R.string.licence), (d, which) -> openLink("https://creativecommons.org/licenses/by/4.0/"))
+                .setNegativeButton(getString(R.string.close), null).show());
+        row(getString(R.string.privacy), getString(R.string.privacy_summary), this::privacy);
+        row(getString(R.string.diagnostics), getString(R.string.diagnostics_summary), () -> Diagnostics.show(this, widgetId, widgetBeforeRefresh));
+        row(getString(R.string.open_source), getString(R.string.source_version, BuildConfig.VERSION_NAME), this::aboutSource);
         space(24);
-        button(configuring ? "Save widget" : "Add widget", configuring ? this::finishConfiguration : this::pinWidget, true);
-        if (!configuring) small("You can also add Rainline from your launcher’s widget picker. Long-press the placed widget to resize it or open its settings where supported.");
+        button(configuring ? getString(R.string.save_widget) : getString(R.string.add_widget), configuring ? this::finishConfiguration : this::pinWidget, true);
+        if (!configuring) small(getString(R.string.widget_help));
         space(8);
         ScrollView current = scroll;
         current.post(() -> current.scrollTo(0, scrollY));
@@ -285,53 +290,51 @@ public final class SettingsActivity extends Activity {
 
     private String widgetLabel(int id) {
         WidgetSettings s = store.get(id);
-        return (s.follow ? "Current location" : s.place.isEmpty() ? "Fixed place" : s.place) + " · widget " + id;
+        return getString(R.string.widget_label, UiText.place(this, s), id);
     }
     private void chooseWidget() {
         int[] ids = Updates.widgetIds(this);
         String[] labels = new String[ids.length + 1];
         int checked = ids.length;
         for (int i = 0; i < ids.length; i++) { labels[i] = widgetLabel(ids[i]); if (ids[i] == widgetId) checked = i; }
-        labels[ids.length] = "Defaults for new widgets";
-        choices("Edit widget", labels, checked, chosen -> {
+        labels[ids.length] = getString(R.string.widget_defaults);
+        choices(getString(R.string.edit_widget), labels, checked, chosen -> {
             widgetId = chosen == ids.length ? 0 : ids[chosen];
             widgetBeforeRefresh = widgetId > 0 ? UpdateDiagnostics.widgetSnapshot(this, widgetId) : "";
             showPage();
         });
     }
     private String locationLabel(WidgetSettings s) {
-        if (!s.hasLocation()) return "Tap to get your location";
-        String name = s.place.isEmpty() ? "Selected place" : s.place;
-        return name + "\n" + String.format(Locale.getDefault(), "%.4f, %.4f", s.latitude, s.longitude)
+        if (!s.hasLocation()) return getString(R.string.get_location);
+        String name = UiText.place(this, s);
+        return name + "\n" + UiText.coordinates(this, s.latitude, s.longitude)
                 + (s.follow ? " · " + time(s.locationAt) : "");
     }
     private String status(WidgetSettings settings, Forecast forecast) {
         String error = store.error(widgetId);
         String details;
-        if (!settings.hasLocation()) details = "Choose a location";
-        else if (settings.locationExpired(System.currentTimeMillis())) details = "Location is out of date";
-        else if (forecast == null) details = "No forecast downloaded yet";
-        else if ("no coverage".equals(forecast.coverage)) details = "No radar coverage at this location";
-        else if ("temporarily unavailable".equals(forecast.coverage)) details = "Radar temporarily unavailable";
-        else if (!forecast.hasRadar()) details = "Precipitation data unavailable";
-        else if (!ForecastWindow.hasUpcomingData(forecast, System.currentTimeMillis())) details = "Waiting for data for the next 90 minutes";
-        else if (forecast.isStale(System.currentTimeMillis())) details = "Showing stored forecast at the current time";
-        else details = "Radar coverage available";
-        if (forecast != null) details += "\nForecast issued " + time(forecast.updatedAt);
+        if (!settings.hasLocation()) details = getString(R.string.choose_location);
+        else if (settings.locationExpired(System.currentTimeMillis())) details = getString(R.string.location_stale);
+        else if (forecast == null) details = getString(R.string.forecast_empty);
+        else if ("no coverage".equals(forecast.coverage)) details = getString(R.string.radar_no_coverage);
+        else if ("temporarily unavailable".equals(forecast.coverage)) details = getString(R.string.radar_unavailable);
+        else if (!forecast.hasRadar()) details = getString(R.string.precipitation_unavailable);
+        else if (!ForecastWindow.hasUpcomingData(forecast, System.currentTimeMillis())) details = getString(R.string.forecast_waiting);
+        else if (forecast.isStale(System.currentTimeMillis())) details = getString(R.string.forecast_stored);
+        else details = getString(R.string.radar_available);
+        if (forecast != null) details += "\n" + getString(R.string.forecast_issued, time(forecast.updatedAt));
         if (settings.hasLocation()) {
             ForecastCache.Entry entry = new ForecastCache(this).read(ForecastWindow.coordinateKey(settings.latitude, settings.longitude));
-            if (entry != null) details += "\nLast successful check " + time(entry.checkedAt);
+            if (entry != null) details += "\n" + getString(R.string.last_successful_check, time(entry.checkedAt));
             if (entry != null && entry.deprecated && store.issue(widgetId) != UpdateIssue.API_DEPRECATED)
-                details += "\nMET is retiring this API version. Check for a Rainline update.";
+                details += "\n" + getString(R.string.error_api_deprecated);
         }
-        if (!error.isEmpty()) details += "\n" + error;
-        if (Updates.pending(this, widgetId)) details += "\nRefresh requested";
+        if (!error.isEmpty()) details += "\n" + UiText.issue(this, store.issue(widgetId));
+        if (Updates.pending(this, widgetId)) details += "\n" + getString(R.string.refresh_requested);
         return details;
     }
     private String time(long timestamp) {
-        if (timestamp == 0) return "never";
-        return DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.getDefault())
-                .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(timestamp));
+        return UiText.time(this, timestamp);
     }
     private void saveSettings(WidgetSettings s) {
         store.put(widgetId, s);
@@ -342,14 +345,14 @@ public final class SettingsActivity extends Activity {
     private void choices(String title, String[] labels, int checked, Choice action) {
         new AlertDialog.Builder(this).setTitle(title).setSingleChoiceItems(labels, checked, (dialog, which) -> {
             dialog.dismiss(); action.chosen(which);
-        }).setNegativeButton("Cancel", null).show();
+        }).setNegativeButton(getString(R.string.cancel), null).show();
     }
     private void chooseLocationMode() {
-        choices("Location mode", new String[]{"Follow my location", "Use a fixed place"}, store.get(widgetId).follow ? 0 : 1, chosen -> {
+        choices(getString(R.string.location_mode), new String[]{getString(R.string.follow_location), getString(R.string.fixed_place_mode)}, store.get(widgetId).follow ? 0 : 1, chosen -> {
             if (chosen == 1) { findPlace(); return; }
             WidgetSettings s = store.get(widgetId);
             s.follow = true;
-            s.place = "Current location";
+            s.place = "";
             s.latitude = Double.NaN; s.longitude = Double.NaN; s.locationAt = 0;
             store.status(widgetId, "", 0);
             saveSettings(s);
@@ -365,28 +368,28 @@ public final class SettingsActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == LOCATION_PERMISSION) {
             if (LocationAccess.foregroundAllowed(this)) refresh(true);
-            else new AlertDialog.Builder(this).setTitle("Choose how to locate your forecast")
-                    .setMessage("You can use a fixed place without location permission, or allow location in Android’s app settings.")
-                    .setPositiveButton("Fixed place", (d, which) -> findPlace())
-                    .setNeutralButton("App settings", (d, which) -> appSettings())
-                    .setNegativeButton("Cancel", null).show();
+            else new AlertDialog.Builder(this).setTitle(getString(R.string.location_choice_title))
+                    .setMessage(getString(R.string.location_choice_help))
+                    .setPositiveButton(getString(R.string.fixed_place), (d, which) -> findPlace())
+                    .setNeutralButton(getString(R.string.app_settings), (d, which) -> appSettings())
+                    .setNegativeButton(getString(R.string.cancel), null).show();
         } else if (requestCode == BACKGROUND_PERMISSION) showPage();
     }
     private void backgroundLocation() {
         if (!LocationAccess.foregroundAllowed(this)) { locate(); return; }
         if (LocationAccess.backgroundAllowed(this)) { appSettings(); return; }
         String option = Build.VERSION.SDK_INT >= 30
-                ? getPackageManager().getBackgroundPermissionOptionLabel().toString() : "Allow all the time";
-        new AlertDialog.Builder(this).setTitle("Follow your location in the background")
-                .setMessage("Rainline uses your location during forecast updates so the widget follows you even when the app is closed.\n\nThe coordinates are sent directly to MET Norway to fetch local weather. Rainline stores the selected location and a small weather cache on this device, with no analytics or tracking service.\n\nChoose “" + option + "” in Android’s Location permission screen. Background access is an option inside Location, not a separate permission in the list.\n\nIf Android no longer shows a permission request, use App settings → Permissions → Location. You can keep using a fixed place without this permission.")
-                .setPositiveButton("Continue", (d, which) -> {
+                ? getPackageManager().getBackgroundPermissionOptionLabel().toString() : getString(R.string.allow_all_the_time);
+        new AlertDialog.Builder(this).setTitle(getString(R.string.background_location_title))
+                .setMessage(getString(R.string.background_location_help, option))
+                .setPositiveButton(getString(R.string.continue_button), (d, which) -> {
                     // Request background access separately, after foreground access. On
                     // Android 11+ PermissionController routes this to the location page.
                     if (Build.VERSION.SDK_INT >= 29)
                         requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, BACKGROUND_PERMISSION);
                     else appSettings();
-                }).setNeutralButton("App settings", (d, which) -> appSettings())
-                .setNegativeButton("Not now", null).show();
+                }).setNeutralButton(getString(R.string.app_settings), (d, which) -> appSettings())
+                .setNegativeButton(getString(R.string.not_now), null).show();
     }
     private void appSettings() {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
@@ -398,10 +401,10 @@ public final class SettingsActivity extends Activity {
         int selected = rain ? current.rainRefreshMinutes : current.dryRefreshMinutes;
         int checked = 0;
         for (int i = 0; i < intervals.length; i++) {
-            labels[i] = "Every " + intervals[i] + " minutes";
+            labels[i] = getString(R.string.every_minutes, intervals[i]);
             if (intervals[i] == selected) checked = i;
         }
-        choices(rain ? "When rain is forecast" : "When no rain is forecast", labels, checked, chosen -> {
+        choices(rain ? getString(R.string.rain_interval) : getString(R.string.dry_interval), labels, checked, chosen -> {
             WidgetSettings settings = store.get(widgetId);
             if (rain) settings.rainRefreshMinutes = intervals[chosen];
             else settings.dryRefreshMinutes = intervals[chosen];
@@ -426,51 +429,48 @@ public final class SettingsActivity extends Activity {
         input.setSingleLine(true);
         input.setTextColor(Color.WHITE);
         input.setHintTextColor(Color.LTGRAY);
-        input.setHint("Place name or latitude, longitude");
+        input.setHint(getString(R.string.place_hint));
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         input.setPadding(dp(20), dp(16), dp(20), dp(16));
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Choose a fixed place")
-                .setView(input).setPositiveButton("Search", null).setNegativeButton("Cancel", null).create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(getString(R.string.choose_fixed_place))
+                .setView(input).setPositiveButton(getString(R.string.search), null).setNegativeButton(getString(R.string.cancel), null).create();
         dialog.setOnShowListener(ignored -> {
             Button search = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             Runnable runSearch = () -> {
                 String query = input.getText().toString().trim();
-                if (query.isEmpty()) { input.setError("Enter a place or coordinates"); return; }
-                String[] coordinates = query.split("[,;]");
-                if (coordinates.length == 2) {
-                    try {
-                        double lat = Double.parseDouble(coordinates[0].trim());
-                        double lon = Double.parseDouble(coordinates[1].trim());
-                        if (!ForecastWindow.isCoordinate(lat, lon)) { input.setError("Latitude must be −90 to 90; longitude −180 to 180"); return; }
-                        applyPlace("Fixed location", lat, lon);
+                if (query.isEmpty()) { input.setError(getString(R.string.enter_place)); return; }
+                try {
+                    double[] coordinates = ForecastWindow.parseCoordinates(query);
+                    if (coordinates != null) {
+                        applyPlace("", coordinates[0], coordinates[1]);
                         dialog.dismiss();
                         return;
-                    } catch (NumberFormatException ignoredNumber) { /* A place such as Oslo, Norway. */ }
-                }
-                if (!Geocoder.isPresent()) { input.setError("Place search is unavailable. Enter latitude, longitude."); return; }
+                    }
+                } catch (IllegalArgumentException invalid) { input.setError(getString(R.string.coordinate_range)); return; }
+                if (!Geocoder.isPresent()) { input.setError(getString(R.string.geocoder_unavailable)); return; }
                 search.setEnabled(false); search.setText(R.string.searching);
                 Updates.IO.execute(() -> {
                     List<Address> addresses = new ArrayList<>();
                     String error = null;
                     try { addresses = geocode(query); }
-                    catch (IOException e) { error = "Place search unavailable. Try latitude, longitude."; }
+                    catch (IOException e) { error = getString(R.string.geocoder_failed); }
                     List<Address> found = addresses;
                     String failure = error;
                     runOnUiThread(() -> {
                         if (!dialog.isShowing() || isDestroyed()) return;
                         search.setEnabled(true); search.setText(R.string.search);
                         if (failure != null || found.isEmpty()) {
-                            input.setError(failure != null ? failure : "No places found. Try a more specific name or coordinates.");
+                            input.setError(failure != null ? failure : getString(R.string.places_empty));
                             return;
                         }
                         String[] labels = new String[found.size()];
                         for (int i = 0; i < found.size(); i++) labels[i] = addressLabel(found.get(i));
-                        new AlertDialog.Builder(this).setTitle("Select a place").setItems(labels, (chooser, index) -> {
+                        new AlertDialog.Builder(this).setTitle(getString(R.string.select_place)).setItems(labels, (chooser, index) -> {
                             Address address = found.get(index);
                             applyPlace(labels[index], address.getLatitude(), address.getLongitude());
                             dialog.dismiss();
-                        }).setNegativeButton("Cancel", null).show();
+                        }).setNegativeButton(getString(R.string.cancel), null).show();
                     });
                 });
             };
@@ -484,7 +484,7 @@ public final class SettingsActivity extends Activity {
     }
     @SuppressWarnings("deprecation")
     private List<Address> geocode(String query) throws IOException {
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+        Geocoder geocoder = new Geocoder(getApplicationContext(), UiText.locale(this));
         if (Build.VERSION.SDK_INT < 33) {
             List<Address> result = geocoder.getFromLocationName(query, 5);
             return result == null ? new ArrayList<>() : result;
@@ -503,7 +503,7 @@ public final class SettingsActivity extends Activity {
     private String addressLabel(Address address) {
         String line = address.getMaxAddressLineIndex() >= 0 ? address.getAddressLine(0) : null;
         if (line != null) return line;
-        return String.format(Locale.getDefault(), "%.4f, %.4f", address.getLatitude(), address.getLongitude());
+        return UiText.coordinates(this, address.getLatitude(), address.getLongitude());
     }
     private void applyPlace(String name, double lat, double lon) {
         WidgetSettings settings = store.get(widgetId);
@@ -526,16 +526,16 @@ public final class SettingsActivity extends Activity {
     }
     private void locateOrFind() {
         if (store.get(widgetId).follow) locate(); else findPlace();
-        Toast.makeText(this, "Choose a location, then save your widget.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, getString(R.string.choose_then_save), Toast.LENGTH_LONG).show();
     }
     private void pinWidget() {
         WidgetSettings settings = store.get(widgetId);
         if (!settings.hasLocation()) { locateOrFind(); return; }
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
         if (!manager.isRequestPinAppWidgetSupported()) {
-            new AlertDialog.Builder(this).setTitle("Add Rainline")
-                    .setMessage("Long-press an empty area on your home screen, open Widgets, and choose Rainline.")
-                    .setPositiveButton("OK", null).show();
+            new AlertDialog.Builder(this).setTitle(getString(R.string.add_rainline))
+                    .setMessage(getString(R.string.pin_help))
+                    .setPositiveButton(getString(R.string.ok), null).show();
             return;
         }
         store.put(0, settings); // Also used if the launcher invokes the normal configuration flow.
@@ -548,24 +548,24 @@ public final class SettingsActivity extends Activity {
         manager.requestPinAppWidget(new ComponentName(this, RainWidgetProvider.class), null, pending);
     }
     private void privacy() {
-        new AlertDialog.Builder(this).setTitle("Privacy")
-                .setMessage("Rainline has no accounts, ads, analytics or tracking SDKs.\n\nForecast requests send coordinates rounded to four decimals directly to api.met.no over HTTPS. MET Norway records IP addresses and request coordinates in its API access logs.\n\nLocation access is optional: you can enter a fixed place or coordinates. Following your location while the app is closed requires optional background location access.\n\nPlace-name searches use Android’s geocoding service. Its provider receives your search text; entering coordinates avoids that search.\n\nSettings and a small cache of recent forecast locations are stored on your device. Rainline excludes these from cloud backup and device transfer. Uninstalling clears them.\n\nDiagnostics are generated locally. Copy places the displayed technical summary on the clipboard; Rainline never uploads it.")
-                .setPositiveButton("MET privacy policy", (d, which) -> openLink("https://www.met.no/en/About-us/privacy"))
-                .setNegativeButton("Close", null).show();
+        new AlertDialog.Builder(this).setTitle(getString(R.string.privacy))
+                .setMessage(getString(R.string.privacy_help))
+                .setPositiveButton(getString(R.string.met_privacy), (d, which) -> openLink("https://www.met.no/en/About-us/privacy"))
+                .setNegativeButton(getString(R.string.close), null).show();
     }
     private void aboutSource() {
         new AlertDialog.Builder(this).setTitle("Rainline " + BuildConfig.VERSION_NAME)
-                .setMessage("Rainline is open-source software under the MIT licence.\n\nCopyright © 2026 erikhardlyworking.\n\n" + LicenseText.MIT)
-                .setPositiveButton("Source code", (d, which) -> {
+                .setMessage(getString(R.string.source_help) + LicenseText.MIT)
+                .setPositiveButton(getString(R.string.source_code), (d, which) -> {
                     if (BuildConfig.SOURCE_URL.startsWith("https://")) openLink(BuildConfig.SOURCE_URL);
-                    else new AlertDialog.Builder(this).setTitle("Source code")
-                            .setMessage("The complete source code is included alongside this test APK.")
-                            .setPositiveButton("OK", null).show();
-                }).setNegativeButton("Close", null).show();
+                    else new AlertDialog.Builder(this).setTitle(getString(R.string.source_code))
+                            .setMessage(getString(R.string.source_included))
+                            .setPositiveButton(getString(R.string.ok), null).show();
+                }).setNegativeButton(getString(R.string.close), null).show();
     }
     private void openLink(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
-        catch (ActivityNotFoundException e) { Toast.makeText(this, "No browser is installed.", Toast.LENGTH_SHORT).show(); }
+        catch (ActivityNotFoundException e) { Toast.makeText(this, getString(R.string.no_browser), Toast.LENGTH_SHORT).show(); }
     }
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private TextView text(String value, int sp) {

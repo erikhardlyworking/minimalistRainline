@@ -30,11 +30,11 @@ final class ForecastChecks {
         check(hasInk(error, 224, 256), "Refresh arrow must remain visible without axes");
         check(hasInk(loading, 230, 250), "Loading indicator must be visible without axes");
         check(!loading.sameAs(error), "Waiting and failed states must look different");
-        check(RainWidgetProvider.description(settings, old, now, state).contains("stored forecast"),
+        check(RainWidgetProvider.description(context, settings, old, now, state).contains(context.getString(R.string.widget_stored)),
                 "Accessibility must describe retained data");
-        check(RainWidgetProvider.description(settings, null, now, ForecastState.LOADING).startsWith("Waiting"),
+        check(RainWidgetProvider.description(context, settings, null, now, ForecastState.LOADING).equals(context.getString(R.string.widget_waiting)),
                 "Loading accessibility description must not say unavailable");
-        check(RainWidgetProvider.description(settings, null, now, ForecastState.UNAVAILABLE).contains("Tap to refresh"),
+        check(RainWidgetProvider.description(context, settings, null, now, ForecastState.UNAVAILABLE).equals(context.getString(R.string.widget_unavailable)),
                 "Refresh arrow must describe its action");
 
         JobInfo wake = Updates.refreshJob(context, true);

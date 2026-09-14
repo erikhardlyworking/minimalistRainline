@@ -77,6 +77,22 @@ is dotted. Missing samples are not joined with an invented line.
 
 ## Settings
 
+### Languages
+
+Rainline supports English, Norwegian Bokmål, Swedish, Finnish and Danish.
+It follows the phone's language, with English as the fallback. On Android 13+
+use **About → Language** in Rainline's settings to choose a language just for
+Rainline through Android's app-language picker.
+
+Settings, help, status/error messages, elapsed times and widget accessibility
+descriptions are translated. Decimal-comma rainfall values are accepted.
+Coordinates can use **59,9139; 10,7522** or **59.9139, 10.7522**; a semicolon
+separates coordinates when commas are used as decimal separators.
+Saved place names remain as entered or selected. The technical diagnostic
+report and the MIT licence text stay in English.
+
+Translation files and checks are described in [Translations](docs/translations.md).
+
 Location and appearance are per widget. The app can switch between placed
 widgets and defaults for new widgets. Options include following your location
 or selecting a fixed place, grey/white/hidden guides, thin/normal forecast
@@ -269,7 +285,7 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.10 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.11 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 

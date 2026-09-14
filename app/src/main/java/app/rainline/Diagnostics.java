@@ -45,15 +45,15 @@ public final class Diagnostics {
         text.setPadding(padding, padding / 2, padding, padding);
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(text);
-        return new AlertDialog.Builder(activity).setTitle("Local diagnostic summary")
-                .setMessage("Generated on this device. No coordinates, place names, request URLs, device IDs or raw logs are included. Copy it only if you want to share it.")
-                .setView(scroll).setPositiveButton("Copy", (dialog, which) -> {
+        return new AlertDialog.Builder(activity).setTitle(activity.getString(R.string.diagnostics_title))
+                .setMessage(activity.getString(R.string.diagnostics_help))
+                .setView(scroll).setPositiveButton(activity.getString(R.string.copy), (dialog, which) -> {
                     ClipboardManager clipboard = activity.getSystemService(ClipboardManager.class);
                     if (clipboard != null) {
                         clipboard.setPrimaryClip(ClipData.newPlainText("Rainline diagnostics", report));
-                        if (Build.VERSION.SDK_INT < 33) Toast.makeText(activity, "Diagnostics copied", Toast.LENGTH_SHORT).show();
+                        if (Build.VERSION.SDK_INT < 33) Toast.makeText(activity, activity.getString(R.string.diagnostics_copied), Toast.LENGTH_SHORT).show();
                     }
-                }).setNegativeButton("Close", null).show();
+                }).setNegativeButton(activity.getString(R.string.close), null).show();
     }
 
     public static String summary(Context context, int widgetId) {

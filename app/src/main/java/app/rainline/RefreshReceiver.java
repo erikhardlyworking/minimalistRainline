@@ -8,6 +8,10 @@ public final class RefreshReceiver extends BroadcastReceiver {
     static final String REFRESH_WIDGET = "app.rainline.REFRESH_WIDGET";
     @Override public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
+        if (Intent.ACTION_LOCALE_CHANGED.equals(action)) {
+            RainWidgetProvider.renderAll(context);
+            return;
+        }
         if (REFRESH_WIDGET.equals(action)) {
             int id = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
             if (!Updates.isOurWidget(context, id)) return;

@@ -76,7 +76,7 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         Bitmap bitmap = ChartRenderer.bitmap(width, height, context.getResources().getDisplayMetrics().density,
                 settings, forecast, now, state);
         views.setImageViewBitmap(R.id.chart, bitmap);
-        String description = description(settings, forecast, now, state);
+        String description = description(context, settings, forecast, now, state);
         views.setContentDescription(R.id.chart, description);
         views.setOnClickPendingIntent(R.id.chart, refreshIntent(context, id));
         return views;
@@ -90,20 +90,19 @@ public final class RainWidgetProvider extends AppWidgetProvider {
         return PendingIntent.getBroadcast(context, id, click,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
-    static String description(WidgetSettings settings, Forecast forecast, long now, ForecastState state) {
-        if (state == ForecastState.LOADING) return "Waiting for precipitation forecast. Tap to refresh.";
-        if (!settings.hasLocation()) return "Location needed. Open Rainline to choose a location. Tap to retry.";
-        if (settings.locationExpired(now)) return "Location needs updating. Tap to refresh. Open Rainline if location access is needed.";
-        if (state == ForecastState.UNAVAILABLE) return "Precipitation forecast unavailable. Tap to refresh.";
+    static String description(Context context, WidgetSettings settings, Forecast forecast, long now, ForecastState state) {
+        if (state == ForecastState.LOADING) return context.getString(R.string.widget_waiting);
+        if (!settings.hasLocation()) return context.getString(R.string.widget_location_needed);
+        if (settings.locationExpired(now)) return context.getString(R.string.widget_location_stale);
+        if (state == ForecastState.UNAVAILABLE) return context.getString(R.string.widget_unavailable);
         java.util.List<ForecastWindow.Segment> segments = ForecastWindow.segments(forecast, now);
-        if (segments.isEmpty()) return "No current precipitation data. Tap to refresh.";
+        if (segments.isEmpty()) return context.getString(R.string.widget_empty);
         double peak = 0;
         for (ForecastWindow.Segment s : segments) peak = Math.max(peak, Math.max(s.startRate, s.endRate));
-        String axis = settings.showTicks ? " Five-minute ticks." : "";
-        if (settings.labels) axis += " Labels at 30, 60 and 90 minutes.";
-        axis += settings.showAxis ? " Dotted axis intervals have no data." : " Gaps have no data.";
-        return String.format(java.util.Locale.getDefault(),
-                "Two-hour precipitation forecast. Peak %.1f millimetres per hour.%s%s Tap to refresh.",
-                peak, axis, forecast.isStale(now) ? " Using stored forecast data." : "");
+        String axis = settings.showTicks ? " " + context.getString(R.string.widget_ticks) : "";
+        if (settings.labels) axis += " " + context.getString(R.string.widget_labels);
+        axis += " " + context.getString(settings.showAxis ? R.string.widget_dotted : R.string.widget_gaps);
+        return context.getString(R.string.widget_forecast, peak, axis,
+                forecast.isStale(now) ? " " + context.getString(R.string.widget_stored) : "");
     }
 }

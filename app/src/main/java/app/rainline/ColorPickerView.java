@@ -20,7 +20,7 @@ public final class ColorPickerView extends View {
     public ColorPickerView(Context context) {
         super(context);
         inset = 9 * getResources().getDisplayMetrics().density;
-        setContentDescription("Colour picker. Drag to choose saturation and brightness, or enter the hex colour below.");
+        setContentDescription(context.getString(R.string.colour_picker_description));
         setClickable(true);
     }
     public void setColor(int color) { Color.colorToHSV(color, hsv); invalidate(); }

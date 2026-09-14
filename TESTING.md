@@ -1,10 +1,27 @@
 # Testing
 
-Version: 0.1.10. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.11. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
 
+- 0.1.11: all 186 translatable resource entries are present in Norwegian Bokmål,
+  Swedish, Finnish and Danish, with matching numbered formatting arguments.
+  `python3 scripts/check-localizations.py` checks completeness and placeholders.
+- Native emulator checks switched Rainline through English and all four added
+  languages using Android's actual per-app language API, then restored the
+  previous choice. Each language's resources formatted successfully; settings
+  text fitted at 360 dp width without clipping or ellipses. Rainfall dialogs
+  accepted decimal-comma values, and displayed coordinates round-tripped through
+  the input parser. English fallback, translated legacy location labels,
+  preserved place names, stored error categories and elapsed times were checked.
+  Screens from all four languages were visually inspected. Use the native suite
+  with `-e locales true` on an Android 13+ emulator without widgets or a location.
+  Android's app-language picker was also opened and its English, Dansk,
+  Norsk bokmål, Suomi and Svenska choices verified without selecting a language.
+- The normal native widget suite, including tap-to-refresh integration, passed
+  again after language switching. The settings tests locate translated controls
+  by resource values, rather than assuming the interface is in English.
 - 0.1.10: on the Samsung S25 Ultra, Rainline was confirmed cached and frozen
   immediately before tapping the widget. The tap was received, a refresh
   completed with no error, and a graph was submitted in about 0.4 seconds.
@@ -41,8 +58,8 @@ without clearing existing widgets or preferences.
   changed. See [the investigation](docs/background-updates.md) for evidence and
   the distinction from the active-process tests below.
 - Debug APK build and Android lint (no errors; advisory warnings remain for
-  pinned build tools, widget previews, drawing allocations and UI localisation).
-- 50 JVM tests: forecast parsing, rates/units, radar status, missing samples,
+  pinned build tools, widget previews and drawing allocations).
+- 53 JVM tests: forecast parsing, rates/units, radar status, missing samples,
   timestamp ordering, exact two-hour clipping, retention beyond 20 minutes, partial/dry data within
   the next 90 minutes, exhausted caches, loading/error precedence, clock mismatches, coordinate
   validation/rounding, settings persistence (including padding and ARGB
@@ -50,6 +67,8 @@ without clearing existing widgets or preferences.
   defaults, invalid rainfall settings, elapsed-age labels and HTTP retry policy. Transport tests
   cover identification/conditional headers through redirects, unsafe redirects,
   redirect loops, gzip/deflate decoding and decompressed-response size limits.
+  Coordinate input checks cover decimal points, decimal commas with a semicolon,
+  ordinary place names, ambiguous input and non-finite/out-of-range coordinates.
 - Refresh-policy tests cover the dry/rain defaults, rain later in the two-hour
   window, ended rain, missing radar/samples, shortened dry coverage, isolated
   rain samples, independent settings and legacy defaults, HTTP expiry, and
@@ -171,6 +190,10 @@ without clearing existing widgets or preferences.
    last update category. Compare the graph submission time and forecast issue
    time too. The report includes a snapshot from before settings performed its
    own refresh, so that refresh does not mask the previous submission state.
+9. On Android 13+, open **About → Language** and choose one of the supported
+   languages. Check settings, rainfall inputs, status messages and widget
+   accessibility descriptions. Choose the system default to follow the phone
+   again. Earlier Android versions follow the phone's language automatically.
 
 Launcher-specific pinning, resize/reconfiguration, tap-through and long-running
 background location/battery behaviour still need hands-on testing, including

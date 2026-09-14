@@ -5,6 +5,18 @@ import java.util.List;
 
 /** Clips actual timestamped samples to "now .. now + two hours". No extrapolation. */
 public final class ForecastWindow {
+    /** Decimal commas use a semicolon between coordinates; place names return null for geocoding. */
+    public static double[] parseCoordinates(String query) {
+        String[] parts = query.trim().split(query.contains(";") ? ";" : ",", -1);
+        if (parts.length != 2) return null;
+        double lat, lon;
+        try {
+            lat = Double.parseDouble(parts[0].trim().replace(',', '.'));
+            lon = Double.parseDouble(parts[1].trim().replace(',', '.'));
+        } catch (NumberFormatException notCoordinates) { return null; }
+        if (!isCoordinate(lat, lon)) throw new IllegalArgumentException("Coordinates out of range");
+        return new double[]{lat, lon};
+    }
     private ForecastWindow() {}
     public static final class Segment {
         public final double startMinute, endMinute, startRate, endRate;

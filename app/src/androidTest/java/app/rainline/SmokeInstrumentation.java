@@ -12,19 +12,26 @@ import java.io.FileOutputStream;
 
 /** Device tests with Android's own instrumentation; no test SDK in the app. */
 public final class SmokeInstrumentation extends Instrumentation {
-    private boolean live, wake, wakeOnly, tap;
+    private boolean live, wake, wakeOnly, tap, locales;
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         live = arguments != null && "true".equals(arguments.getString("live"));
         wake = arguments != null && "true".equals(arguments.getString("wake"));
         wakeOnly = arguments != null && "true".equals(arguments.getString("wakeOnly"));
         tap = arguments != null && "true".equals(arguments.getString("tap"));
+        locales = arguments != null && "true".equals(arguments.getString("locales"));
         start();
     }
     @Override public void onStart() {
         Bundle results = new Bundle();
         try {
             Context context = getTargetContext();
+            if (locales) {
+                LocalizationChecks.run(this, context);
+                results.putString("result", "Five app languages, English fallback, formatting, decimal input and native layouts passed");
+                finish(Activity.RESULT_OK, results);
+                return;
+            }
             if (wakeOnly) {
                 WakeChecks.run(this, context);
                 results.putString("result", "Unlock, cache refresh and widget host delivery passed");
@@ -88,9 +95,9 @@ public final class SmokeInstrumentation extends Instrumentation {
             check(activity != null, "Settings did not launch");
             runOnMainSync(() -> {
                 android.view.View root = activity.findViewById(android.R.id.content);
-                check(find(root, android.widget.Button.class, "Open Yr") != null, "Open Yr button missing");
-                check(find(root, android.widget.TextView.class, "When rain is forecast") != null, "Rain refresh interval setting missing");
-                check(find(root, android.widget.TextView.class, "When no rain is forecast") != null, "Dry refresh interval setting missing");
+                check(find(root, android.widget.Button.class, activity.getString(R.string.open_yr)) != null, "Open Yr button missing");
+                check(find(root, android.widget.TextView.class, activity.getString(R.string.rain_interval)) != null, "Rain refresh interval setting missing");
+                check(find(root, android.widget.TextView.class, activity.getString(R.string.dry_interval)) != null, "Dry refresh interval setting missing");
                 check(find(root, android.widget.TextView.class, "30 · 60 · 90 minutes  /  small ticks every 5 minutes") == null,
                         "Old time-axis explanatory text must be removed");
             });
@@ -144,11 +151,11 @@ public final class SmokeInstrumentation extends Instrumentation {
             android.app.AlertDialog dialog = AppearanceDialogs.timeAxis(activity, settings, applied::set);
             android.view.View root = dialog.getWindow().getDecorView();
             android.widget.SeekBar size = find(root, android.widget.SeekBar.class);
-            android.widget.CheckBox show = find(root, android.widget.CheckBox.class, "Show numbers");
+            android.widget.CheckBox show = find(root, android.widget.CheckBox.class, activity.getString(R.string.show_time_labels));
             check(size != null && show != null, "Time label controls missing");
             size.setProgress(20);
-            find(root, android.widget.CheckBox.class, "Show time-axis line").setChecked(false);
-            find(root, android.widget.CheckBox.class, "Show ticks").setChecked(false);
+            find(root, android.widget.CheckBox.class, activity.getString(R.string.show_time_axis)).setChecked(false);
+            find(root, android.widget.CheckBox.class, activity.getString(R.string.show_time_ticks)).setChecked(false);
             show.setChecked(false);
             check(!size.isEnabled(), "Size slider should be disabled with hidden labels");
             show.setChecked(true);
@@ -237,8 +244,8 @@ public final class SmokeInstrumentation extends Instrumentation {
         onMain(() -> {
             android.app.AlertDialog dialog = AppearanceDialogs.rainfall(activity, settings, applied::set);
             android.view.View root = dialog.getWindow().getDecorView();
-            android.widget.EditText ceiling = find(root, android.widget.EditText.class, "Graph ceiling (mm/h)");
-            android.widget.EditText threshold = find(root, android.widget.EditText.class, "Highlight threshold (mm/h)");
+            android.widget.EditText ceiling = find(root, android.widget.EditText.class, activity.getString(R.string.graph_ceiling));
+            android.widget.EditText threshold = find(root, android.widget.EditText.class, activity.getString(R.string.highlight_threshold));
             check(ceiling != null && threshold != null, "Rainfall numeric controls missing");
             ceiling.setText("0");
             check(!dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled(), "Zero ceiling must be rejected");

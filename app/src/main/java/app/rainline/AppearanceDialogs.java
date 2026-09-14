@@ -30,7 +30,7 @@ public final class AppearanceDialogs {
     public static AlertDialog timeAxis(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
         WidgetSettings draft = current.copy();
         LinearLayout body = body(activity);
-        label(body, "Sample rain · time axis preview");
+        label(body, activity.getString(R.string.preview_time_axis));
         View preview = preview(activity, draft);
         body.addView(preview, new LinearLayout.LayoutParams(-1, dp(activity, 120)));
         CheckBox axis = checkBox(body, R.string.show_time_axis, draft.showAxis);
@@ -38,7 +38,7 @@ public final class AppearanceDialogs {
         CheckBox show = checkBox(body, R.string.show_time_labels, draft.labels);
         axis.setOnCheckedChangeListener((button, checked) -> { draft.showAxis = checked; preview.invalidate(); });
         ticks.setOnCheckedChangeListener((button, checked) -> { draft.showTicks = checked; preview.invalidate(); });
-        SeekBar size = slider(body, "Text size", 24, draft.labelSize, "", value -> {
+        SeekBar size = slider(body, activity.getString(R.string.text_size), 24, draft.labelSize, "", value -> {
             draft.labelSize = value; preview.invalidate();
         });
         size.setMin(8);
@@ -46,10 +46,10 @@ public final class AppearanceDialogs {
         show.setOnCheckedChangeListener((button, checked) -> {
             draft.labels = checked; size.setEnabled(checked); preview.invalidate();
         });
-        label(body, "Hide the line, ticks and numbers to show just the rain curve. Numbers shrink on very narrow widgets to fit without overlapping.");
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Time axis")
-                .setView(scroll(body)).setPositiveButton("Apply", (d, which) -> apply.accept(draft))
-                .setNegativeButton("Cancel", null).setNeutralButton("Reset", null).create();
+        label(body, activity.getString(R.string.time_axis_help));
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(activity.getString(R.string.time_axis))
+                .setView(scroll(body)).setPositiveButton(activity.getString(R.string.apply), (d, which) -> apply.accept(draft))
+                .setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(activity.getString(R.string.reset), null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
             WidgetSettings defaults = new WidgetSettings();
             axis.setChecked(defaults.showAxis); ticks.setChecked(defaults.showTicks);
@@ -73,17 +73,17 @@ public final class AppearanceDialogs {
     public static AlertDialog padding(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
         WidgetSettings draft = current.copy();
         LinearLayout body = body(activity);
-        label(body, "Sample rain · spacing preview");
+        label(body, activity.getString(R.string.preview_padding));
         View preview = preview(activity, draft);
         body.addView(preview, new LinearLayout.LayoutParams(-1, dp(activity, 120)));
-        SeekBar left = slider(body, "Left", 48, draft.paddingLeft, "dp", value -> { draft.paddingLeft = value; preview.invalidate(); });
-        SeekBar top = slider(body, "Top", 48, draft.paddingTop, "dp", value -> { draft.paddingTop = value; preview.invalidate(); });
-        SeekBar right = slider(body, "Right", 48, draft.paddingRight, "dp", value -> { draft.paddingRight = value; preview.invalidate(); });
-        SeekBar bottom = slider(body, "Bottom", 48, draft.paddingBottom, "dp", value -> { draft.paddingBottom = value; preview.invalidate(); });
-        label(body, "Space inside the widget. Large padding shrinks on small widgets to keep the graph readable.");
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Content padding")
-                .setView(scroll(body)).setPositiveButton("Apply", (d, which) -> apply.accept(draft))
-                .setNegativeButton("Cancel", null).setNeutralButton("Reset", null).create();
+        SeekBar left = slider(body, activity.getString(R.string.left), 48, draft.paddingLeft, "dp", value -> { draft.paddingLeft = value; preview.invalidate(); });
+        SeekBar top = slider(body, activity.getString(R.string.top), 48, draft.paddingTop, "dp", value -> { draft.paddingTop = value; preview.invalidate(); });
+        SeekBar right = slider(body, activity.getString(R.string.right), 48, draft.paddingRight, "dp", value -> { draft.paddingRight = value; preview.invalidate(); });
+        SeekBar bottom = slider(body, activity.getString(R.string.bottom), 48, draft.paddingBottom, "dp", value -> { draft.paddingBottom = value; preview.invalidate(); });
+        label(body, activity.getString(R.string.padding_help));
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(activity.getString(R.string.content_padding))
+                .setView(scroll(body)).setPositiveButton(activity.getString(R.string.apply), (d, which) -> apply.accept(draft))
+                .setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(activity.getString(R.string.reset), null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
             WidgetSettings defaults = new WidgetSettings();
             left.setProgress(defaults.paddingLeft); top.setProgress(defaults.paddingTop);
@@ -103,10 +103,10 @@ public final class AppearanceDialogs {
 
     private static AlertDialog colour(Activity activity, WidgetSettings current, boolean highlight, Consumer<WidgetSettings> apply) {
         ColorEditor editor = new ColorEditor(activity, current.copy(), highlight);
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(highlight ? "Rain highlight colour" : "Background colour")
-                .setView(scroll(editor)).setPositiveButton("Apply", (d, which) -> {
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(highlight ? activity.getString(R.string.highlight_colour) : activity.getString(R.string.background_colour))
+                .setView(scroll(editor)).setPositiveButton(activity.getString(R.string.apply), (d, which) -> {
                     if (editor.valid) apply.accept(editor.draft);
-                }).setNegativeButton("Cancel", null).setNeutralButton(highlight ? "Red" : "Transparent", null).create();
+                }).setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(highlight ? activity.getString(R.string.red) : activity.getString(R.string.transparent), null).create();
         editor.dialog = dialog;
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(editor.valid);
@@ -119,17 +119,17 @@ public final class AppearanceDialogs {
 
     public static AlertDialog rainfall(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
         RainfallEditor editor = new RainfallEditor(activity, current.copy());
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Rainfall scale and highlight")
-                .setView(scroll(editor)).setPositiveButton("Apply", (d, which) -> {
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(activity.getString(R.string.rainfall_scale))
+                .setView(scroll(editor)).setPositiveButton(activity.getString(R.string.apply), (d, which) -> {
                     if (editor.valid) apply.accept(editor.draft);
-                }).setNegativeButton("Cancel", null).setNeutralButton("Reset", null).create();
+                }).setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(activity.getString(R.string.reset), null).create();
         editor.dialog = dialog;
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(editor.valid);
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
                 WidgetSettings defaults = new WidgetSettings();
-                editor.ceiling.setText(Float.toString(defaults.scaleMax));
-                editor.threshold.setText(Float.toString(defaults.highlightThreshold));
+                editor.ceiling.setText(UiText.rate(activity, defaults.scaleMax));
+                editor.threshold.setText(UiText.rate(activity, defaults.highlightThreshold));
                 editor.highlight.setChecked(defaults.highlightRain);
             });
         });
@@ -151,19 +151,19 @@ public final class AppearanceDialogs {
             this.draft = draft;
             setOrientation(VERTICAL);
             setPadding(dp(context, 20), dp(context, 4), dp(context, 20), dp(context, 12));
-            label(this, "Sample rain · scale preview");
+            label(this, getContext().getString(R.string.preview_scale));
             preview = preview(context, draft);
             addView(preview, new LayoutParams(-1, dp(context, 120)));
-            ceiling = rateEntry("Graph ceiling (mm/h)", draft.scaleMax);
+            ceiling = rateEntry(getContext().getString(R.string.graph_ceiling), draft.scaleMax);
             guides = label(this, "");
             highlight = new CheckBox(context);
-            highlight.setText("Highlight rain at or above the threshold");
+            highlight.setText(getContext().getString(R.string.highlight_enable));
             highlight.setTextColor(Color.WHITE);
             highlight.setButtonTintList(ColorStateList.valueOf(Color.WHITE));
             highlight.setChecked(draft.highlightRain);
             addView(highlight, new LayoutParams(-1, -2));
-            threshold = rateEntry("Highlight threshold (mm/h)", draft.highlightThreshold);
-            label(this, "Enter 0.1–100 mm/h. Rain above the ceiling is capped and marked with a small upward tick. Turn highlighting off for an entirely white forecast line.");
+            threshold = rateEntry(getContext().getString(R.string.highlight_threshold), draft.highlightThreshold);
+            label(this, getContext().getString(R.string.rainfall_help));
             TextWatcher watcher = new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) { update(); }
@@ -185,7 +185,7 @@ public final class AppearanceDialogs {
             entry.setKeyListener(android.text.method.DigitsKeyListener.getInstance("0123456789.,"));
             entry.setRawInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
             entry.setContentDescription(title);
-            entry.setText(Float.toString(initial));
+            entry.setText(UiText.rate(getContext(), initial));
             addView(entry, new LayoutParams(-1, dp(getContext(), 52)));
             return entry;
         }
@@ -194,7 +194,7 @@ public final class AppearanceDialogs {
             double value;
             try { value = Double.parseDouble(entry.getText().toString().trim().replace(',', '.')); }
             catch (NumberFormatException e) { value = Double.NaN; }
-            entry.setError(WidgetSettings.validRainRate(value) ? null : "Enter a number from 0.1 to 100");
+            entry.setError(WidgetSettings.validRainRate(value) ? null : getContext().getString(R.string.rate_invalid));
             return value;
         }
 
@@ -205,16 +205,13 @@ public final class AppearanceDialogs {
                 draft.scaleMax = (float) max;
                 draft.highlightThreshold = (float) from;
                 draft.highlightRain = highlight.isChecked();
-                guides.setText("Guides: " + rateLabel(max / 3) + " and " + rateLabel(max * 2 / 3) + " mm/h.");
+                guides.setText(getContext().getString(R.string.guides_summary, UiText.rate(getContext(), max / 3), UiText.rate(getContext(), max * 2 / 3)));
                 preview.invalidate();
             }
             if (dialog != null && dialog.isShowing()) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(valid);
         }
     }
 
-    public static String rateLabel(double value) {
-        return new java.text.DecimalFormat("0.##").format(value);
-    }
 
     private static final class ColorEditor extends LinearLayout {
         final WidgetSettings draft;
@@ -232,13 +229,13 @@ public final class AppearanceDialogs {
             this.highlight = highlight;
             setOrientation(VERTICAL);
             setPadding(dp(context, 20), dp(context, 4), dp(context, 20), dp(context, 12));
-            label(this, highlight ? "Sample rain · highlight colour preview" : "Sample rain · background preview");
+            label(this, highlight ? getContext().getString(R.string.preview_highlight) : getContext().getString(R.string.preview_background));
             preview = preview(context, draft, highlight);
             addView(preview, new LayoutParams(-1, dp(context, 100)));
             plane = new ColorPickerView(context);
             plane.setColor(colour());
             addView(plane, new LayoutParams(-1, dp(context, 158)));
-            hue = slider(this, "Hue", 360, Math.round(plane.hue()), "°", value -> {
+            hue = slider(this, getContext().getString(R.string.hue), 360, Math.round(plane.hue()), "°", value -> {
                 if (!syncing) plane.setHue(value);
             });
             GradientDrawable rainbow = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
@@ -247,25 +244,25 @@ public final class AppearanceDialogs {
             hue.setProgressTintList(null);
             hue.setProgressDrawable(rainbow);
             hue.setSplitTrack(false);
-            opacity = highlight ? null : slider(this, "Opacity", 255, colour() >>> 24, "%", value -> {
+            opacity = highlight ? null : slider(this, getContext().getString(R.string.opacity), 255, colour() >>> 24, "%", value -> {
                 if (!syncing) {
                     setColour((value << 24) | (colour() & 0xffffff));
                     syncText();
                 }
             });
-            label(this, highlight ? "Hex colour · #RRGGBB" : "Hex colour · #RRGGBB or #AARRGGBB");
+            label(this, highlight ? getContext().getString(R.string.hex_opaque) : getContext().getString(R.string.hex_alpha));
             hex = new EditText(context);
             hex.setSingleLine(true);
             hex.setTextColor(Color.WHITE);
             hex.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
             hex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(highlight ? 7 : 9)});
             hex.setSelectAllOnFocus(true);
-            hex.setContentDescription(highlight ? "Rain highlight hex colour, six colour digits."
-                    : "Background hex colour, six colour digits or eight digits with opacity first.");
+            hex.setContentDescription(highlight ? getContext().getString(R.string.hex_highlight_description)
+                    : getContext().getString(R.string.hex_background_description));
             hex.setText(ColorValue.format(colour()));
             addView(hex, new LayoutParams(-1, dp(context, 52)));
-            label(this, highlight ? "This colour preview uses sample rain and a 2.5 mm/h threshold. Your widget uses its saved threshold."
-                    : "Eight digits put opacity first: 00 is transparent, FF is opaque. Rain highlight colour is set separately.");
+            label(this, highlight ? getContext().getString(R.string.highlight_preview_help)
+                    : getContext().getString(R.string.alpha_help));
             plane.setOnColorChanged(color -> {
                 setColour((colour() & 0xff000000) | (color & 0xffffff));
                 syncText();
@@ -325,7 +322,7 @@ public final class AppearanceDialogs {
         return view;
     }
     private static SeekBar slider(LinearLayout parent, String title, int max, int initial, String unit, IntConsumer change) {
-        TextView description = label(parent, sliderLabel(title, initial, unit));
+        TextView description = label(parent, sliderLabel(parent.getContext(), title, initial, unit));
         SeekBar bar = new SeekBar(parent.getContext());
         bar.setMax(max); bar.setProgress(initial);
         bar.setContentDescription(title);
@@ -334,7 +331,7 @@ public final class AppearanceDialogs {
         parent.addView(bar, new LinearLayout.LayoutParams(-1, dp(parent.getContext(), 40)));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                description.setText(sliderLabel(title, progress, unit));
+                description.setText(sliderLabel(parent.getContext(), title, progress, unit));
                 change.accept(progress);
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
@@ -342,8 +339,8 @@ public final class AppearanceDialogs {
         });
         return bar;
     }
-    private static String sliderLabel(String title, int value, String unit) {
-        return String.format(Locale.getDefault(), "%s · %d %s", title,
+    private static String sliderLabel(Context context, String title, int value, String unit) {
+        return String.format(UiText.locale(context), "%s · %d %s", title,
                 "%".equals(unit) ? Math.round(value * 100f / 255) : value, unit).trim();
     }
     private static View preview(Context context, WidgetSettings draft) {
