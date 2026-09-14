@@ -5,6 +5,19 @@ without clearing existing widgets or preferences.
 
 ## Completed checks
 
+- Additional standby investigation on 14 September, using the unchanged
+  0.1.9 APK: the Samsung's broadcast queue held `USER_PRESENT` for over three
+  minutes while Rainline was frozen by MARs. Background location was granted.
+  A subsequent user unlock submitted a fresh graph within about 0.4 seconds of
+  the received screen-on event, with an alarm also arriving then. This confirms
+  an intermittent delivery problem, not a corrected wake-up path.
+- A separate external Android 16 emulator probe waited for Rainline to freeze
+  naturally, without instrumentation. Screen-on and unlock remained deferred
+  after 15 seconds on the launcher; opening settings released the unlock.
+  This reproduces the delivery problem independently of Samsung. The emulator's
+  swipe-lock setting was restored, and no permissions or battery settings were
+  changed. See [the investigation](docs/background-updates.md) for evidence and
+  the distinction from the active-process tests below.
 - Debug APK build and Android lint (no errors; advisory warnings remain for
   pinned build tools, widget previews, drawing allocations and UI localisation).
 - 50 JVM tests: forecast parsing, rates/units, radar status, missing samples,
@@ -136,6 +149,26 @@ without clearing existing widgets or preferences.
 
 Launcher-specific pinning, resize/reconfiguration, tap-through and long-running
 background location/battery behaviour still need hands-on testing, including
-wake-up after Android has cached or killed the app process. An emulator test
-with an active app process does not establish delivery latency under Samsung
-power management. Older Android versions have been checked with lint, not yet with physical devices.
+wake-up after Android has killed the app process. The external probe now
+reproduces cached-process deferral; the instrumented test described above
+cannot cover that condition. Older Android versions have been checked with
+lint, not yet with physical devices.
+
+## Reproduce deferred unlock delivery
+
+Use an Android emulator with a debuggable Rainline installation, no configured
+location or placed Rainline widgets, and no PIN/password. Widgets are omitted
+so their scheduled alarms cannot activate the app during the observation.
+
+```sh
+python3 scripts/verify-cached-unlock.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554
+```
+
+The probe allows up to 150 seconds for natural freezing, then unlocks and
+observes delivery for 15 seconds before opening settings. An emulator that
+never freezes is reported as inconclusive. A run that receives the unlock
+while cached reports that outcome instead of treating deferral as universal.
+The script refuses physical devices, restores the previous swipe-lock setting,
+and makes no weather requests. It verifies event delivery, not data retrieval
+or widget rendering. Do not run instrumentation concurrently: it keeps the
+application active and changes the condition being tested.

@@ -10,6 +10,53 @@ foreground location, so it can recover from several different problems.
 
 ## Findings
 
+### Frozen-process failure confirmed on the Samsung
+
+On 14 September, read-only inspection of the Samsung S25 Ultra running Android
+16 and Rainline 0.1.9 captured the failure without opening Rainline. The app
+process was cached and frozen. Samsung's broadcast queue reported
+`INFINITE_DEFER`, `FRZ by MARs`, and a `USER_PRESENT` unlock event held for
+3 minutes 23 seconds. No immediate refresh job was pending. Foreground and
+background location permissions were both granted. The app was in the active
+standby bucket, so this observation does not establish that it was on Samsung's
+Sleeping apps or Deep sleeping apps list.
+
+The next user-performed unlock, leaving the launcher visible without tapping
+Rainline, succeeded: screen-on was received at 10:45:20.830 Europe/Oslo, the
+refresh job started at 10:45:20.913, and the new graph was submitted at
+10:45:21.201. An alarm/system callback also arrived during that sequence.
+It may have activated the process and released the queued broadcasts; the
+timestamps alone do not establish which callback caused the activation.
+
+These captures establish intermittent event-delivery failure before the
+refresh job is scheduled. They do not reconstruct the earlier morning's exact
+cross indicator: the latest diagnostic fields had already been replaced after
+the user opened settings. Submission timestamps establish a call to Android's
+widget host, not a measured display-paint time.
+
+Android's [cached-app freezer documentation](https://source.android.com/docs/core/perf/cached-apps-freezer)
+explains that runtime broadcasts queue while a process is frozen. Starting an
+activity or job, or receiving an eligible manifest intent, can activate it.
+[System UI's unlock broadcast](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SystemUI/src/com/android/systemui/keyguard/KeyguardViewMediator.java)
+explicitly uses `DEFERRAL_POLICY_UNTIL_ACTIVE`. Opening settings therefore
+provides the activation that an unlock event alone may not provide. Exporting
+the receiver fixes sender rejection but cannot override this delivery policy.
+
+The instrumented unlock test below exercises an active process. It cannot
+verify recovery from freezing because instrumentation changes process
+importance. The external emulator probe in
+[`scripts/verify-cached-unlock.py`](../scripts/verify-cached-unlock.py) instead
+waits for natural freezing before unlocking, inspects the held broadcast, and
+then opens settings to check whether activation releases it. It does not
+change permissions, battery policy or the system freezer configuration.
+On the Android 16 emulator this reproduced the same behaviour: after 15
+seconds on the unlocked launcher, Rainline was still frozen and both
+`SCREEN_ON` and `USER_PRESENT` were deferred. Opening settings released the
+unlock event. This probe isolates delivery, with no widgets or configured
+location, so it does not make a weather request or test host rendering.
+
+### Earlier application fixes
+
 The 0.1.8 investigation found an application bug in addition to the platform
 limits below. The runtime receiver used `RECEIVER_NOT_EXPORTED`. That accepts
 screen-on from the system UID, but rejects unlock broadcasts sent by System UI
@@ -131,7 +178,8 @@ standby limits: WorkManager uses JobScheduler for this work. See
 
 Doing the whole update inside `BroadcastReceiver.goAsync()` would bypass the
 job scheduling step only after a broadcast is delivered. It would not revive
-a killed receiver. Its execution deadline includes the asynchronous work;
+a killed receiver or release a broadcast held for a frozen process. Its
+execution deadline includes the asynchronous work;
 Rainline's location lookup and HTTP request can exceed that deadline on a slow
 connection. Android recommends scheduling longer widget work instead. See
 [widget update guidance](https://developer.android.com/develop/ui/views/appwidgets/advanced).
@@ -141,10 +189,23 @@ requires a notification and a valid service type. A special-use declaration
 also needs Play review. It is not the default for this minimal widget. See
 [foreground services](https://developer.android.com/develop/background-work/services/fgs)
 and [service types](https://developer.android.com/develop/background-work/services/fgs/service-types#special-use).
+Keeping an explicitly enabled service active is the supported direction to
+investigate if prompt unlock handling is essential. Network access must still
+pause while the phone is locked or asleep, and honour the selected intervals,
+HTTP cache and retry delays. Service stops, connectivity and scheduling still
+prevent an unconditional seconds-after-unlock guarantee.
+
+[Samsung documents](https://developer.samsung.com/mobile/app-management.html)
+**Settings → Device care → Battery → Background usage limits → Never sleeping
+apps** as an exception to its application-control restrictions. That is a
+reasonable user-controlled trial, but it is not evidence that Android's
+cached-broadcast deferral has been disabled. Rainline was not battery-optimizer
+exempt during this investigation. No battery settings or permissions were
+changed, and no always-running service was added.
 
 There is no promise of an update within 20 seconds on every launcher and power
 mode. The automated wake test runs with an instrumented app process and cannot
 establish Samsung's delivery timing after process freezing or termination.
-Those conditions still require device testing; the expanded diagnostics make
-it possible to distinguish event delivery, job scheduling, location and HTTP
-failures when they occur.
+The physical-device capture above now confirms freezing-related deferral; it
+does not demonstrate a fix. Process termination and long-running recovery
+remain separate cases requiring device testing.

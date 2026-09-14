@@ -175,7 +175,10 @@ broadcasts also advance the graph without requesting weather.
 Android can defer [screen broadcasts](https://developer.android.com/develop/background-work/background-tasks/broadcasts#android_14)
 in a cached process; listeners also stop when the process is killed. The
 existing alarm, periodic job and widget callbacks remain as recovery paths.
-An instant refresh on every unlock is therefore not guaranteed. The
+This was reproduced on a Samsung S25 Ultra and an Android 16 emulator with
+Rainline 0.1.9: unlock remained queued while the app was frozen, despite
+background location being enabled on the phone. Opening settings activates the
+process. An instant refresh on every unlock is therefore not guaranteed. The
 [background update investigation](docs/background-updates.md) explains the
 platform limits, alternatives, location behaviour and testing limits.
 
