@@ -5,6 +5,15 @@ without clearing existing widgets or preferences.
 
 ## Completed checks
 
+- 18 September 2026, Play preparation for 0.1.12: release AAB build and release
+  lint passed (0 errors, 15 warnings). The AAB is unsigned; Play distribution,
+  release signing and the location declaration have not been verified by this
+  build check. The emulator exported four native app screenshots for each of
+  five languages, five feature graphics and the existing launcher mark at 512 px.
+  Asset dimensions/PNG colour modes, listing character limits, translation
+  completeness and archive checksums are validated by the packaging script.
+  Capture uses the app's labelled sample previews, without fetching forecasts
+  or requesting permissions, and restores emulator display and app preferences.
 - 0.1.12: added the tap-to-refresh and power-saving explanation above **Open Yr**
   in all five languages. Translation completeness (187 entries per translation),
   debug build, Android lint (no errors) and the existing native language/layout

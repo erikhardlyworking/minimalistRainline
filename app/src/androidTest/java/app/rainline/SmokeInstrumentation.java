@@ -12,7 +12,7 @@ import java.io.FileOutputStream;
 
 /** Device tests with Android's own instrumentation; no test SDK in the app. */
 public final class SmokeInstrumentation extends Instrumentation {
-    private boolean live, wake, wakeOnly, tap, locales;
+    private boolean live, wake, wakeOnly, tap, locales, store;
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         live = arguments != null && "true".equals(arguments.getString("live"));
@@ -20,12 +20,19 @@ public final class SmokeInstrumentation extends Instrumentation {
         wakeOnly = arguments != null && "true".equals(arguments.getString("wakeOnly"));
         tap = arguments != null && "true".equals(arguments.getString("tap"));
         locales = arguments != null && "true".equals(arguments.getString("locales"));
+        store = arguments != null && "true".equals(arguments.getString("store"));
         start();
     }
     @Override public void onStart() {
         Bundle results = new Bundle();
         try {
             Context context = getTargetContext();
+            if (store) {
+                StoreScreenshotInstrumentation.run(this);
+                results.putString("result", "20 native screenshots, 5 feature graphics and the app icon exported");
+                finish(Activity.RESULT_OK, results);
+                return;
+            }
             if (locales) {
                 LocalizationChecks.run(this, context);
                 results.putString("result", "Five app languages, English fallback, formatting, decimal input and native layouts passed");

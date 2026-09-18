@@ -1,4 +1,9 @@
-# Rainline privacy
+# Rainline privacy policy
+
+Last updated: 18 September 2026.
+
+Rainline is developed by **Hardly Working**. Privacy and support contact:
+[workinghardlyforyou@gmail.com](mailto:workinghardlyforyou@gmail.com).
 
 Rainline has no accounts, advertisements, analytics or tracking SDKs.
 
@@ -32,7 +37,8 @@ Searching by place name uses Android's geocoding service. The device's geocoding
 provider receives that query and handles it under its own policies. Entering
 coordinates avoids name search.
 
-Tapping the widget opens Rainline settings. The **Open Yr** button opens Yr if
+Tapping the widget requests a refresh. Touch and hold for settings if the
+launcher supports reconfiguration, or open Rainline. The **Open Yr** button opens Yr if
 installed or its website, whose own policies apply. About links open external
 documentation in your browser.
 
@@ -59,6 +65,10 @@ Rainline does not upload the report or retain a report history. Pressing Copy
 places it on Android's clipboard so you can choose where to paste it; the
 receiving app or website then handles that text under its own policy.
 
-This policy describes the 0.1.x test builds maintained by erikhardlyworking.
-For questions, use the
-[repository issue tracker](https://github.com/erikhardlyworking/minimalistRainline/issues).
+This policy describes Rainline, maintained by Hardly Working. You can also use the
+[repository issue tracker](https://github.com/erikhardlyworking/minimalistRainline/issues)
+for public bug reports. If you email support, Hardly Working receives your email
+address and message through Gmail to respond; this is separate from forecast
+requests. Clearing app data does not remove copies you shared elsewhere or
+logs retained by MET and the geocoding provider. Contact those services about
+their retained data.

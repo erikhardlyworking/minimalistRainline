@@ -8,6 +8,13 @@ cards, ads, accounts or analytics.
 [Source](https://github.com/erikhardlyworking/minimalistRainline) ·
 [Issues and maintainer contact](https://github.com/erikhardlyworking/minimalistRainline/issues)
 
+Developed by **Hardly Working**. Support:
+[workinghardlyforyou@gmail.com](mailto:workinghardlyforyou@gmail.com).
+
+Google Play listing text, screenshot generation and the submission walkthrough
+are in [the Play preparation pack](play/README.md). These are preparation
+materials; the current local APK is still a debug build.
+
 ## Try the first version
 
 Requires Android 8.0 or newer.
