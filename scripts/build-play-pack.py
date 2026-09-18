@@ -45,6 +45,7 @@ def html_page(lang, title, body):
 
 review = ['<h1>Rainline · Google Play</h1><p>Prepared for Hardly Working · 18 September 2026.<br>Support: <a href="mailto:workinghardlyforyou@gmail.com">workinghardlyforyou@gmail.com</a></p>',
           '<p>Copy-ready listings and actual app screenshots in five languages. Forecast previews use the app’s labelled sample data. This pack has not been submitted to Google Play.</p>',
+          '<p><a href="icon.png"><img src="icon.png" width="128" height="128" alt="Rainline store icon: a black rain graph on white"></a></p>',
           '<nav><a href="README.md">Publishing walkthrough</a><a href="data-safety.md">Data safety draft</a><a href="background-location.md">Location review</a><a href="privacy/index.html">Privacy pages</a></nav>',
           '<nav>' + ''.join(f'<a href="#{tag}">{escape(LISTINGS[tag]["language"])}</a>' for tag in LOCALES) + '</nav>']
 rows = []

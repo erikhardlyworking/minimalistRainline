@@ -12,6 +12,9 @@ without clearing existing widgets or preferences.
   five languages, five feature graphics and the existing launcher mark at 512 px.
   Asset dimensions/PNG colour modes, listing character limits, translation
   completeness and archive checksums are validated by the packaging script.
+  The store icon and all five feature graphics were subsequently regenerated
+  with white backgrounds and black artwork/text; native export and pack checks
+  passed, and the exported icon and feature graphics were visually inspected.
   Capture uses the app's labelled sample previews, without fetching forecasts
   or requesting permissions, and restores emulator display and app preferences.
 - 0.1.12: added the tap-to-refresh and power-saving explanation above **Open Yr**

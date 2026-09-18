@@ -40,8 +40,10 @@ recommendation; that does not guarantee promotional placement.
 [Asset requirements](https://support.google.com/googleplay/android-developer/answer/9866151?hl=en)
 
 Screenshots show actual Android settings and dialogs, with the app's own labelled
-sample forecast. They are not home-screen screenshots or live weather. The feature
-graphic uses the actual chart renderer with its supported all-white setting.
+sample forecast. They are not home-screen screenshots or live weather. The store
+icon and all five feature graphics use white backgrounds with black artwork and
+text. The feature graphics use the actual chart geometry, recoloured for this
+promotional artwork.
 There is no personal phone content or weather data from a user's location.
 
 ## 1. Finish account setup and create the app

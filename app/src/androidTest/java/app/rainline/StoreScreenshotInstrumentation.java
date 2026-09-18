@@ -10,6 +10,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -100,8 +102,9 @@ public final class StoreScreenshotInstrumentation {
             test.runOnMainSync(() -> {
                 Bitmap icon = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(icon);
-                canvas.drawColor(Color.BLACK);
-                Drawable mark = context.getDrawable(R.drawable.ic_rainline);
+                canvas.drawColor(Color.WHITE);
+                Drawable mark = context.getDrawable(R.drawable.ic_rainline).mutate();
+                mark.setTint(Color.BLACK);
                 mark.setBounds(0, 0, 512, 512); mark.draw(canvas);
                 save(context, icon, "icon.png", true);
                 icon.recycle();
@@ -148,18 +151,22 @@ public final class StoreScreenshotInstrumentation {
     private static void feature(Context context, String language, String subtitle) {
         Bitmap bitmap = Bitmap.createBitmap(1024, 500, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        canvas.drawColor(Color.BLACK);
+        canvas.drawColor(Color.WHITE);
         Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
-        text.setColor(Color.WHITE); text.setTextAlign(Paint.Align.CENTER);
+        text.setColor(Color.BLACK); text.setTextAlign(Paint.Align.CENTER);
         text.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         text.setTextSize(68); canvas.drawText("Rainline", 512, 128, text);
         text.setTextSize(26); canvas.drawText(subtitle, 512, 180, text);
         WidgetSettings settings = new WidgetSettings();
         settings.highlightRain = false;
         long now = System.currentTimeMillis();
-        canvas.save(); canvas.translate(160, 230);
-        ChartRenderer.draw(canvas, 704, 180, 2f, settings, Forecast.example(now), now, ForecastState.DATA);
-        canvas.restore();
+        // Reuse the native chart geometry with black ink for the white store artwork.
+        Bitmap chart = Bitmap.createBitmap(704, 180, Bitmap.Config.ARGB_8888);
+        ChartRenderer.draw(new Canvas(chart), 704, 180, 2f, settings, Forecast.example(now), now, ForecastState.DATA);
+        Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ink.setColorFilter(new PorterDuffColorFilter(Color.BLACK, PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(chart, 160, 230, ink);
+        chart.recycle();
         save(context, bitmap, language + "/feature-graphic.png", false);
         bitmap.recycle();
     }
