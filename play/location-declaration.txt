@@ -1,0 +1,7 @@
+What is the main purpose of your app?
+
+Rainline is an open-source Android home-screen widget showing the next two hours of local precipitation in Norway, Sweden, Denmark and Finland, where radar coverage is available. It lets users see when rain is expected to start or stop at a glance, without opening a weather app. The widget can follow the user’s current location or show a fixed place.
+
+Describe one location-based feature in your app that needs access to location in the background.
+
+Follow my location keeps the home-screen rain forecast relevant as the user moves. With permission, Rainline obtains or reuses a recent device location during widget updates while the app is closed, then sends coordinates to MET Norway for the forecast. Foreground-only access cannot obtain a fresh location while only the widget is visible. Updates respect Android power saving; location is not continuously tracked. Users can choose a fixed place without location permission.

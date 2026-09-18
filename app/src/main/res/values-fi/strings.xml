@@ -96,6 +96,8 @@
     <string name="forecast_stored">Näytetään tallennettu ennuste nykyhetkeen sovitettuna</string>
     <string name="radar_available">Tutkapeitto saatavilla</string>
     <string name="cancel">Peruuta</string>
+    <string name="location_disclosure_title">Sijainti sade-ennustetta varten</string>
+    <string name="location_disclosure_help">Rainline kerää sijaintitietoja päivittääkseen sade-ennustewidgetin nykyiseen sijaintiisi. Jos sallit sijainnin käytön taustalla, tämä tapahtuu myös sovelluksen ollessa suljettuna tai poissa käytöstä.\n\nKoordinaatit lähetetään MET Norwaylle ennusteen hakemiseksi. MET saa myös IP-osoitteesi. Sovelluksessa ei ole mainoksia tai analytiikkaa. Voit käyttää kiinteää sijaintia ilman sijaintilupaa.</string>
     <string name="location_choice_title">Valitse, miten ennusteen sijainti määritetään</string>
     <string name="location_choice_help">Voit käyttää kiinteää sijaintia ilman sijaintilupaa tai sallia sijainnin Androidin sovellusasetuksissa.</string>
     <string name="app_settings">Sovellusasetukset</string>

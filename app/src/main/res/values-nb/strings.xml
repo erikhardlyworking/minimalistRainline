@@ -96,6 +96,8 @@
     <string name="forecast_stored">Viser lagret varsel tilpasset nåværende tid</string>
     <string name="radar_available">Radardekning tilgjengelig</string>
     <string name="cancel">Avbryt</string>
+    <string name="location_disclosure_title">Posisjon for regnvarselet ditt</string>
+    <string name="location_disclosure_help">Rainline samler inn posisjonsdata for å oppdatere regnvarsel-widgeten for stedet du er. Med posisjonstilgang i bakgrunnen skjer dette også når appen er lukket eller ikke er i bruk.\n\nKoordinatene sendes til MET Norway for å hente varselet. MET mottar også IP-adressen din. Det finnes ingen annonser eller analyseverktøy. Du kan bruke et fast sted uten posisjonstillatelse.</string>
     <string name="location_choice_title">Velg hvordan varselets posisjon skal angis</string>
     <string name="location_choice_help">Du kan bruke et fast sted uten posisjonstillatelse, eller tillate posisjon i Androids appinnstillinger.</string>
     <string name="app_settings">Appinnstillinger</string>

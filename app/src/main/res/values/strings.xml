@@ -97,6 +97,8 @@
     <string name="forecast_stored">Showing stored forecast at the current time</string>
     <string name="radar_available">Radar coverage available</string>
     <string name="cancel">Cancel</string>
+    <string name="location_disclosure_title">Location for your rain forecast</string>
+    <string name="location_disclosure_help">Rainline collects location data to update the rain forecast widget for where you are. With background access, it also does this when the app is closed or not in use.\n\nCoordinates are sent to MET Norway for the forecast; MET also receives your IP address. There are no ads or analytics. You can use a fixed place without location permission.</string>
     <string name="location_choice_title">Choose how to locate your forecast</string>
     <string name="location_choice_help">You can use a fixed place without location permission, or allow location in Android’s app settings.</string>
     <string name="app_settings">App settings</string>

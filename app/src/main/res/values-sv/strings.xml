@@ -96,6 +96,8 @@
     <string name="forecast_stored">Visar sparad prognos anpassad till aktuell tid</string>
     <string name="radar_available">Radartäckning tillgänglig</string>
     <string name="cancel">Avbryt</string>
+    <string name="location_disclosure_title">Plats för din regnprognos</string>
+    <string name="location_disclosure_help">Rainline samlar in platsdata för att uppdatera regnprognoswidgeten för platsen där du är. Med platsåtkomst i bakgrunden sker detta även när appen är stängd eller inte används.\n\nKoordinaterna skickas till MET Norway för att hämta prognosen. MET tar även emot din IP-adress. Det finns inga annonser eller analysverktyg. Du kan använda en fast plats utan platsbehörighet.</string>
     <string name="location_choice_title">Välj hur prognosens plats ska anges</string>
     <string name="location_choice_help">Du kan använda en fast plats utan platsbehörighet, eller tillåta plats i Androids appinställningar.</string>
     <string name="app_settings">Appinställningar</string>

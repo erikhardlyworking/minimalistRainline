@@ -362,7 +362,12 @@ public final class SettingsActivity extends Activity {
     }
     private void locate() {
         if (!LocationAccess.foregroundAllowed(this)) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_PERMISSION);
+            new AlertDialog.Builder(this).setTitle(getString(R.string.location_disclosure_title))
+                    .setMessage(getString(R.string.location_disclosure_help))
+                    .setPositiveButton(getString(R.string.continue_button), (d, which) ->
+                            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_PERMISSION))
+                    .setNeutralButton(getString(R.string.fixed_place), (d, which) -> findPlace())
+                    .setNegativeButton(getString(R.string.not_now), null).show();
         } else refresh(true);
     }
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {

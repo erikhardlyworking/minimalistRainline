@@ -3,10 +3,12 @@
 Prepared 18 September 2026 for **Hardly Working**, an **organisation** developer
 account. Public support: **workinghardlyforyou@gmail.com**.
 
-This is a preparation pack, not a submitted or approved Play release. The app
-still identifies as **0.1.12 (13)**, package **app.rainline**. Production behaviour
-has not changed in this preparation. No signing key has been created and nothing
-has been uploaded to Play Console.
+The current signed release is **0.1.13 (14)**, package **app.rainline**. It adds
+a location disclosure before the first permission prompt in all five languages.
+The original listing/screenshot ZIP still contains the **0.1.12 (13)** unsigned
+inspection build; use the newer signed bundle described in step 5. A local upload
+key and review video have been prepared. No Play or YouTube upload has been
+performed by these preparation scripts.
 
 ## Files to use
 
@@ -90,14 +92,12 @@ Read them, including the proposed support-email retention wording, before making
 them your public policy. They identify Hardly Working and the support email and
 explain MET, Android geocoding, local storage, diagnostics and deletion.
 
-A straightforward hosting option is GitHub Pages:
+The pages are live on GitHub Pages, deployed from **main**, **/docs**. The root
+page and all five policy languages were verified publicly accessible.
 
-1. Commit and push these pages to the repository.
-2. In repository **Settings → Pages**, select deployment from **main**, **/docs**.
-3. Wait for deployment and open the privacy page in a signed-out browser.
-4. Use `https://erikhardlyworking.github.io/minimalistRainline/privacy/` in Play
-   Console **App content → Privacy policy** **only after it actually loads**.
-   This is a proposed URL, not a verified live page.
+Use **https://erikhardlyworking.github.io/minimalistRainline/privacy/** in Play
+Console **App content → Privacy policy**. Changes pushed to `docs/` are published
+through the repository's Pages deployment.
 
 [GitHub Pages deployment settings](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
@@ -143,18 +143,28 @@ Suggested **App access/reviewer instructions**:
 
 ## 5. Create the signed Android App Bundle
 
-The release build and release lint have been checked locally. The bundled AAB is
-**unsigned** and is included for inspection, not direct upload. Do not upload the
-personal-testing debug APK or use its debug certificate for production.
+The signed bundle is
+`output/release/0.1.13/rainline-0.1.13-14-release.aab`.
+The release build, 53 unit tests, release lint, bundle structure and signature
+checks passed. The original ZIP's explicitly **UNSIGNED** bundle is for
+inspection, not direct upload. Do not upload the personal-testing debug APK.
+
+The upload keystore and password are private local files in
+`~/.local/share/rainline/signing/`, outside the repository. Back up both securely.
+That folder's README explains how to reuse the key for future uploads.
+
+The matching 30-second review video is
+`output/location-review/rainline-background-location.mp4`, with declaration and
+YouTube copy in the same folder. It shows actual permission screens and a real
+widget refresh using simulated GPS coordinates on an Android 16 emulator.
 
 The app targets **Android 16 / API 36**, meeting the current new-app target level.
 [Current target API rule](https://support.google.com/googleplay/android-developer/answer/11926878?hl=en-AU)
 
-In Android Studio, open this repository, then **Build → Generate Signed App
-Bundle / APK → Android App Bundle**. Choose the `app` module and create or select
-an **upload keystore**. Keep it outside the repository, choose its password
-locally, and store a backup in a secure location. Do not put the password in chat,
-source files or the store pack. Build the **release** variant.
+For later releases, reuse the existing upload key. Android Studio’s **Build →
+Generate Signed App Bundle / APK → Android App Bundle** wizard can select it,
+or use the command-line instructions in the private signing folder. Keep the
+password out of chat, source files and store packs.
 
 Use **Play App Signing**. The upload key signs the bundle you send to Google;
 Play's app-signing key signs the APKs installed by users. The wizard can sign a
@@ -163,7 +173,7 @@ release without committing keystore credentials to this Gradle project.
 [Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756?hl=en)
 
 Before signing for submission, finish the privacy/disclosure checks in steps 3
-and 4. If app code changes, increment `versionCode` (currently 13), rebuild and
+and 4. If app code changes, increment `versionCode` (currently 14), rebuild and
 recapture any affected screenshots. Keep source/version notes aligned.
 
 The APK currently on your Samsung is debug-signed. A Play-signed build with the
@@ -192,12 +202,12 @@ app. Let the dashboard guide any further review requests.
 ## Decisions and work still needed before submission
 
 - Confirm final package ID, price and target audience in your account.
-- Review and host the privacy pages; check the URL while signed out.
+- Keep the published privacy policy aligned with the final release.
 - Align the in-app privacy text and location disclosure with the final policy.
 - Finalise Data safety, especially the device-dependent geocoding service and
   MET's server-side logging; do not treat the draft as an already filed form.
-- Record the background-location flow and its effect on the home-screen widget.
-- Create and back up the upload key; generate a signed release AAB.
+- Upload the prepared background-location video to an accessible YouTube link.
+- Back up the upload key and password; upload the prepared signed release AAB.
 - Verify the Play-delivered build, then submit the reviewed production release.
 
 ## Reproducing the pack
