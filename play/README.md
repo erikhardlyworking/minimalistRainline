@@ -5,8 +5,8 @@ account. Public support: **workinghardlyforyou@gmail.com**.
 
 The current signed release is **0.1.13 (14)**, package **app.rainline**. It adds
 a location disclosure before the first permission prompt in all five languages.
-The original listing/screenshot ZIP still contains the **0.1.12 (13)** unsigned
-inspection build; use the newer signed bundle described in step 5. A local upload
+The listing/screenshot ZIP includes an explicitly **UNSIGNED** inspection build;
+use the signed bundle described in step 5. A local upload
 key and review video have been prepared. No Play or YouTube upload has been
 performed by these preparation scripts.
 
@@ -25,7 +25,7 @@ The complete handoff is also in `output/rainline-google-play-pack.zip`.
 | Each language's `image-descriptions.txt` | Accessible descriptions of the graphics |
 | Each language's `release-notes.txt` | What's new in the release |
 | `privacy/index.html`, `nb.html`, `sv.html`, `fi.html`, `da.html` | Public privacy pages, ready to host |
-| `rainline-0.1.12-UNSIGNED.aab` | Build verification artifact; **sign before upload** |
+| `rainline-0.1.13-UNSIGNED.aab` | Build verification artifact; use the separate signed bundle for upload |
 | `data-safety.md`, `background-location.md` | Working notes for App content and review |
 
 The Norwegian store folder uses Play's `no-NO` name; the app itself uses Android's
@@ -33,6 +33,12 @@ The Norwegian store folder uses Play's `no-NO` name; the app itself uses Android
 description within 80, and every full description within 4,000. The generator
 also checks 500-character release notes and 140-character image descriptions.
 [Google's listing fields](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en)
+
+Full descriptions use simple `<b>` headings and ordinary line breaks. In
+`review.html`, use **Copy for Google Play** or the copy-ready text file to retain
+the tags when pasting into Play Console. **Formatted preview** shows the bold
+headings for review. The 4,000-character check includes the formatting tags;
+app names and short descriptions remain plain text.
 
 There are four **1080 × 1920** phone screenshots per language, a **1024 × 500**
 feature graphic per language and a shared **512 × 512** icon. Screenshots and

@@ -40,11 +40,37 @@ def validate_png(path, dimensions, colour):
 
 style = '''body{margin:0;background:#080808;color:#eee;font:17px/1.65 system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px 24px}h1,h2{font-weight:400;line-height:1.2}h1{font-size:44px}h2{margin-top:48px}a{color:inherit;text-underline-offset:4px}nav{display:flex;flex-wrap:wrap;gap:22px;margin:24px 0}section{border-top:1px solid #555;margin:40px 0;padding-bottom:24px}pre{white-space:pre-wrap;font:inherit}.screens{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.screens img{width:100%;height:auto;border:1px solid #333}figure{margin:0}figcaption{font-size:13px;line-height:1.4;margin:8px 0}.feature{display:block;width:100%;max-width:700px;height:auto;border:1px solid #333;margin:20px 0}summary{cursor:pointer;padding:12px 0}small{color:#bbb}p{max-width:850px}code{overflow-wrap:anywhere}@media(max-width:750px){.screens{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:34px}}'''
 
-def html_page(lang, title, body):
-    return f'<!doctype html>\n<html lang="{lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)}</title><style>{style}</style><main>{body}</main></html>\n'
+def html_page(lang, title, body, extra_style=''):
+    return f'<!doctype html>\n<html lang="{lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)}</title><style>{style}{extra_style}</style><main>{body}</main></html>\n'
+
+review_style = '''textarea{box-sizing:border-box;width:100%;min-height:350px;padding:16px;background:#111;color:#eee;border:1px solid #777;border-radius:4px;font:15px/1.6 ui-monospace,monospace;resize:vertical}button{padding:10px 16px;margin:0 12px 16px 0;background:#fff;color:#000;border:0;border-radius:4px;font:inherit;cursor:pointer}button:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:3px}.description-preview{white-space:pre-wrap;max-width:850px;padding:20px;border:1px solid #555}.description-preview b{font-weight:700}'''
+
+copy_script = '''<script>
+document.querySelectorAll('[data-copy]').forEach(button => {
+  button.addEventListener('click', async () => {
+    const field = document.getElementById(button.dataset.copy);
+    field.focus();
+    field.select();
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(field.value);
+        copied = true;
+      }
+    } catch (_) {}
+    if (!copied) {
+      try { copied = document.execCommand('copy'); } catch (_) {}
+    }
+    document.getElementById(button.dataset.copy + '-status').textContent =
+      copied ? 'Copied — paste into Full description in Play Console.' :
+               'Text selected — use your browser’s Copy command.';
+  });
+});
+</script>'''
 
 review = ['<h1>Rainline · Google Play</h1><p>Prepared for Hardly Working · 18 September 2026.<br>Support: <a href="mailto:workinghardlyforyou@gmail.com">workinghardlyforyou@gmail.com</a></p>',
           '<p>Copy-ready listings and actual app screenshots in five languages. Forecast previews use the app’s labelled sample data. This pack has not been submitted to Google Play.</p>',
+          '<p>App names and short descriptions use plain text. Full descriptions use simple <code>&lt;b&gt;</code> headings and ordinary line breaks. Use <strong>Copy for Google Play</strong> to copy the text with its formatting tags; expand <strong>Formatted preview</strong> to read it with bold headings.</p>',
           '<p><a href="icon.png"><img src="icon.png" width="128" height="128" alt="Rainline store icon: a black rain graph on white"></a></p>',
           '<nav><a href="README.md">Publishing walkthrough</a><a href="data-safety.md">Data safety draft</a><a href="background-location.md">Location review</a><a href="privacy/index.html">Privacy pages</a></nav>',
           '<nav>' + ''.join(f'<a href="#{tag}">{escape(LISTINGS[tag]["language"])}</a>' for tag in LOCALES) + '</nav>']
@@ -57,6 +83,13 @@ for tag in LOCALES:
         assert value.strip() == value and 0 < len(value) <= limit, (tag, field, len(value))
         assert not re.search(r'TODO|PLACEHOLDER|\[INSERT', value), (tag, field)
         write(f'{tag}/{filename}', value + '\n')
+    # Only standalone bold headings are allowed in Play description markup.
+    for line in item['full_description'].splitlines():
+        if '<' in line or '>' in line:
+            assert re.fullmatch(r'<b>[^<>]+</b>', line), (tag, line)
+    assert '<b>' in item['full_description'], (tag, 'Missing formatted headings')
+    assert all('<' not in item[field] and '>' not in item[field]
+               for field in ['title', 'short_description']), (tag, 'Expected plain text')
     assert len(item['alt_text']) == 4
     assert all(0 < len(text) <= 140 for text in item['alt_text'] + [item['feature_alt']])
     rows.append(f'| {tag} | {len(item["title"])} | {len(item["short_description"])} | {len(item["full_description"])} | {len(item["release_notes"])} |')
@@ -73,7 +106,18 @@ for tag in LOCALES:
         review.append(f'<figure><a href="{dest}"><img src="{dest}" alt="{escape(alt)}" loading="lazy"></a><figcaption>{escape(alt)}</figcaption></figure>')
         alts.append(name + '.png: ' + alt)
     write(f'{tag}/image-descriptions.txt', '\n\n'.join(alts) + '\n')
-    review.append(f'</div><details><summary>Full description · {len(item["full_description"])} / 4000</summary><pre>{escape(item["full_description"])}</pre><a href="{tag}/full-description.txt">Plain text</a></details><details><summary>Release notes</summary><pre>{escape(item["release_notes"])}</pre></details></section>')
+    description = item['full_description']
+    description_id = tag + '-full-description'
+    # Escape all content before allowing just the validated bold tags in the preview.
+    preview = escape(description).replace('&lt;b&gt;', '<b>').replace('&lt;/b&gt;', '</b>')
+    review.append(f'</div><details open><summary>Full description · {len(description)} / 4000 characters, including HTML tags</summary>'
+                  f'<p>Paste the complete text below into Google Play’s <strong>Full description</strong> field.</p>'
+                  f'<button type="button" data-copy="{description_id}">Copy for Google Play</button>'
+                  f'<a href="{tag}/full-description.txt">Open copy-ready text</a>'
+                  f'<p id="{description_id}-status" role="status" aria-live="polite"></p>'
+                  f'<textarea id="{description_id}" aria-label="{escape(item["language"])} full description with HTML formatting" readonly spellcheck="false">{escape(description)}</textarea>'
+                  f'<details><summary>Formatted preview</summary><div class="description-preview">{preview}</div></details></details>'
+                  f'<details><summary>Release notes</summary><pre>{escape(item["release_notes"])}</pre></details></section>')
     policy = PRIVACY[tag]
     links = '<nav>' + ''.join(f'<a href="{PAGES[other]}">{escape(LISTINGS[other]["language"])}</a>' for other in LOCALES) + '</nav>'
     body = '<h1>' + escape(policy['title']) + '</h1><p>' + escape(policy['updated']) + '</p>' + links
@@ -87,10 +131,10 @@ for tag in LOCALES:
     host.write_text(page, encoding='utf-8')
 validate_png(CAPTURES / 'icon.png', (512,512), 6)
 copy(CAPTURES / 'icon.png', 'icon.png')
-write('review.html', html_page('en', 'Rainline · Google Play handoff', ''.join(review)))
+write('review.html', html_page('en', 'Rainline · Google Play handoff', ''.join(review) + copy_script, review_style))
 for name in ['README.md','data-safety.md','background-location.md']:
     copy(ROOT / 'play' / name, name)
-write('validation.md', '# Pack validation\n\n| Locale | Title / 30 | Short / 80 | Full / 4000 | Notes / 500 |\n| --- | --- | --- | --- | --- |\n' + '\n'.join(rows) + '\n\n20 screenshots: 1080×1920 RGB PNG. Five feature graphics: 1024×500 RGB PNG. Icon: 512×512 RGBA PNG. Native captures use the existing labelled sample preview.\n')
+write('validation.md', '# Pack validation\n\n| Locale | Title / 30 | Short / 80 | Full / 4000 (including HTML) | Notes / 500 |\n| --- | --- | --- | --- | --- |\n' + '\n'.join(rows) + '\n\nFull descriptions use only standalone <b> headings and ordinary line breaks. Names and short descriptions remain plain text.\n\n20 screenshots: 1080×1920 RGB PNG. Five feature graphics: 1024×500 RGB PNG. Icon: 512×512 RGBA PNG. Native captures use the existing labelled sample preview.\n')
 (ROOT / 'docs/.nojekyll').touch()
 (ROOT / 'docs/index.html').write_text(html_page('en','Rainline','<h1>Rainline</h1><p>A minimal, open-source rain forecast widget for Android.</p><nav><a href="privacy/">Privacy policy · Personvern · Integritet · Tietosuoja · Privatliv</a><a href="https://github.com/erikhardlyworking/minimalistRainline">Source code</a><a href="mailto:workinghardlyforyou@gmail.com">Support</a></nav>'), encoding='utf-8')
 bundle = ROOT / 'app/build/outputs/bundle/release/app-release.aab'
