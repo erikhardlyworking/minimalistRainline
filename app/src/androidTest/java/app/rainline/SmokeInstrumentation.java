@@ -54,12 +54,13 @@ public final class SmokeInstrumentation extends Instrumentation {
             if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
             WidgetSettings settings = new WidgetSettings();
+            WidgetTheme.MINIMAL.applyTo(settings);
             settings.follow = false;
             for (int[] size : new int[][]{{130,64}, {240,110}, {400,100}, {180,240}}) {
                 Bitmap bitmap = ChartRenderer.bitmap(size[0], size[1], 3f, settings, Forecast.example(now), now, ForecastState.DATA);
                 check(bitmap.getWidth() > 0 && bitmap.getHeight() > 0, "Empty bitmap");
                 check(bitmap.getAllocationByteCount() <= 1_800_000, "Bitmap exceeds widget budget");
-                check(android.graphics.Color.alpha(bitmap.getPixel(0,0)) == 0, "Default background must be transparent");
+                check(android.graphics.Color.alpha(bitmap.getPixel(0,0)) == 0, "Minimal background must be transparent");
                 RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.rain_widget);
                 views.setImageViewBitmap(R.id.chart, bitmap);
                 runOnMainSync(() -> {
@@ -121,6 +122,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                     screen.compress(Bitmap.CompressFormat.PNG, 100, output);
                 } catch (java.io.IOException e) { throw new AssertionError(e); }
             });
+            ThemeChecks.run(this, context, activity);
             checkAppearanceDialogs(activity, context, settings);
             checkRainfallDialogs(activity, context, settings);
             checkTimeAxisDialog(activity, context, settings);
@@ -142,7 +144,7 @@ public final class SmokeInstrumentation extends Instrumentation {
                 network = " Live MET HTTPS fetch, JSON parsing and expiry-cache reuse also passed.";
             }
             results.putString("stream", "\nPassed: four widget sizes, bitmap budget, RemoteViews inflation, missing-data rendering, settings launch and layout capture; padding bounds, custom/transparent backgrounds and colour/padding dialog edits."
-                    + " Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, expedited quota fallback, queued-job promotion, disabled-background-location handling, settings navigation controls and private-data exclusion from diagnostics passed." + network + "\n");
+                    + " Theme migration, presets, colours, rounded cards and theme selection also passed. Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, expedited quota fallback, queued-job promotion, disabled-background-location handling, settings navigation controls and private-data exclusion from diagnostics passed." + network + "\n");
             finish(Activity.RESULT_OK, results);
         } catch (Throwable e) {
             results.putString("stream", "\nFAILED: " + android.util.Log.getStackTraceString(e));
@@ -203,6 +205,7 @@ public final class SmokeInstrumentation extends Instrumentation {
     }
     private static void checkRainfallRendering(long now) {
         WidgetSettings s = new WidgetSettings();
+        WidgetTheme.MINIMAL.applyTo(s);
         s.follow = false;
         Bitmap rising = rainBitmap(s, now, 2, 4);
         rainPixel(rising, .5, 2.2, 3, android.graphics.Color.WHITE, "Rain below threshold must stay white");

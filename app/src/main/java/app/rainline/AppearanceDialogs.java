@@ -94,24 +94,44 @@ public final class AppearanceDialogs {
     }
 
     public static AlertDialog background(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
-        return colour(activity, current, false, apply);
+        return colour(activity, current, ColourTarget.BACKGROUND, apply);
     }
 
     public static AlertDialog highlightColour(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
-        return colour(activity, current, true, apply);
+        return colour(activity, current, ColourTarget.HIGHLIGHT, apply);
     }
 
-    private static AlertDialog colour(Activity activity, WidgetSettings current, boolean highlight, Consumer<WidgetSettings> apply) {
-        ColorEditor editor = new ColorEditor(activity, current.copy(), highlight);
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(highlight ? activity.getString(R.string.highlight_colour) : activity.getString(R.string.background_colour))
+    public static AlertDialog rainColour(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
+        return colour(activity, current, ColourTarget.RAIN, apply);
+    }
+
+    public static AlertDialog axisColour(Activity activity, WidgetSettings current, Consumer<WidgetSettings> apply) {
+        return colour(activity, current, ColourTarget.AXIS, apply);
+    }
+
+    private enum ColourTarget {
+        BACKGROUND(R.string.background_colour, R.string.preview_background, R.string.transparent, Color.TRANSPARENT),
+        HIGHLIGHT(R.string.highlight_colour, R.string.preview_highlight, R.string.red, Color.RED),
+        RAIN(R.string.rain_colour, R.string.preview_description, R.string.white, Color.WHITE),
+        AXIS(R.string.axis_colour, R.string.preview_description, R.string.white, Color.WHITE);
+
+        final int title, preview, resetLabel, resetColour;
+        ColourTarget(int title, int preview, int resetLabel, int resetColour) {
+            this.title = title; this.preview = preview; this.resetLabel = resetLabel; this.resetColour = resetColour;
+        }
+    }
+
+    private static AlertDialog colour(Activity activity, WidgetSettings current, ColourTarget target, Consumer<WidgetSettings> apply) {
+        ColorEditor editor = new ColorEditor(activity, current.copy(), target);
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(activity.getString(target.title))
                 .setView(scroll(editor)).setPositiveButton(activity.getString(R.string.apply), (d, which) -> {
                     if (editor.valid) apply.accept(editor.draft);
-                }).setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(highlight ? activity.getString(R.string.red) : activity.getString(R.string.transparent), null).create();
+                }).setNegativeButton(activity.getString(R.string.cancel), null).setNeutralButton(activity.getString(target.resetLabel), null).create();
         editor.dialog = dialog;
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(editor.valid);
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
-                    editor.hex.setText(ColorValue.format(highlight ? Color.RED : Color.TRANSPARENT)));
+                    editor.hex.setText(ColorValue.format(target.resetColour)));
         });
         dialog.show();
         return dialog;
@@ -215,7 +235,7 @@ public final class AppearanceDialogs {
 
     private static final class ColorEditor extends LinearLayout {
         final WidgetSettings draft;
-        final boolean highlight;
+        final ColourTarget target;
         final EditText hex;
         final ColorPickerView plane;
         final SeekBar hue, opacity;
@@ -223,13 +243,15 @@ public final class AppearanceDialogs {
         AlertDialog dialog;
         boolean syncing, valid = true;
 
-        ColorEditor(Context context, WidgetSettings draft, boolean highlight) {
+        ColorEditor(Context context, WidgetSettings draft, ColourTarget target) {
             super(context);
             this.draft = draft;
-            this.highlight = highlight;
+            this.target = target;
+            boolean highlight = target == ColourTarget.HIGHLIGHT;
+            boolean opaque = target != ColourTarget.BACKGROUND;
             setOrientation(VERTICAL);
             setPadding(dp(context, 20), dp(context, 4), dp(context, 20), dp(context, 12));
-            label(this, highlight ? getContext().getString(R.string.preview_highlight) : getContext().getString(R.string.preview_background));
+            label(this, getContext().getString(target.preview));
             preview = preview(context, draft, highlight);
             addView(preview, new LayoutParams(-1, dp(context, 100)));
             plane = new ColorPickerView(context);
@@ -244,25 +266,26 @@ public final class AppearanceDialogs {
             hue.setProgressTintList(null);
             hue.setProgressDrawable(rainbow);
             hue.setSplitTrack(false);
-            opacity = highlight ? null : slider(this, getContext().getString(R.string.opacity), 255, colour() >>> 24, "%", value -> {
+            opacity = opaque ? null : slider(this, getContext().getString(R.string.opacity), 255, colour() >>> 24, "%", value -> {
                 if (!syncing) {
                     setColour((value << 24) | (colour() & 0xffffff));
                     syncText();
                 }
             });
-            label(this, highlight ? getContext().getString(R.string.hex_opaque) : getContext().getString(R.string.hex_alpha));
+            label(this, opaque ? getContext().getString(R.string.hex_opaque) : getContext().getString(R.string.hex_alpha));
             hex = new EditText(context);
             hex.setSingleLine(true);
             hex.setTextColor(Color.WHITE);
             hex.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            hex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(highlight ? 7 : 9)});
+            hex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(opaque ? 7 : 9)});
             hex.setSelectAllOnFocus(true);
             hex.setContentDescription(highlight ? getContext().getString(R.string.hex_highlight_description)
-                    : getContext().getString(R.string.hex_background_description));
+                    : !opaque ? getContext().getString(R.string.hex_background_description)
+                    : getContext().getString(target.title) + ". " + getContext().getString(R.string.hex_opaque));
             hex.setText(ColorValue.format(colour()));
             addView(hex, new LayoutParams(-1, dp(context, 52)));
-            label(this, highlight ? getContext().getString(R.string.highlight_preview_help)
-                    : getContext().getString(R.string.alpha_help));
+            if (highlight) label(this, getContext().getString(R.string.highlight_preview_help));
+            else if (!opaque) label(this, getContext().getString(R.string.alpha_help));
             plane.setOnColorChanged(color -> {
                 setColour((colour() & 0xff000000) | (color & 0xffffff));
                 syncText();
@@ -287,10 +310,21 @@ public final class AppearanceDialogs {
                 @Override public void afterTextChanged(Editable s) { }
             });
         }
-        private int colour() { return highlight ? draft.highlightColor : draft.backgroundColor; }
+        private int colour() {
+            return switch (target) {
+                case BACKGROUND -> draft.backgroundColor;
+                case HIGHLIGHT -> draft.highlightColor;
+                case RAIN -> draft.rainColor;
+                case AXIS -> draft.foregroundColor;
+            };
+        }
         private void setColour(int colour) {
-            if (highlight) draft.highlightColor = colour | 0xff000000;
-            else draft.backgroundColor = colour;
+            switch (target) {
+                case BACKGROUND -> draft.backgroundColor = colour;
+                case HIGHLIGHT -> draft.highlightColor = colour | 0xff000000;
+                case RAIN -> draft.rainColor = colour | 0xff000000;
+                case AXIS -> draft.foregroundColor = colour | 0xff000000;
+            }
         }
         private void syncText() {
             syncing = true;

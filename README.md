@@ -1,9 +1,8 @@
 # Rainline
 
 A small, open-source Android home-screen widget for the next two hours of
-precipitation. A transparent background, a thin white line with optional rain
-highlights, and no weather icons,
-cards, ads, accounts or analytics.
+precipitation. Three compact themes, custom colours and optional rain
+highlights, with no ads, accounts or analytics.
 
 [Source](https://github.com/erikhardlyworking/minimalistRainline) ·
 [Issues and maintainer contact](https://github.com/erikhardlyworking/minimalistRainline/issues)
@@ -53,13 +52,13 @@ website as a fallback. Widget setup is labelled **Configure the widget**.
 ## Reading the graph
 
 - Left edge: now. Right edge: two hours from now.
-- Labels: **30, 60, 90** minutes. Major ticks every 30 minutes; visible white
+- Labels: **30, 60, 90** minutes. Major ticks every 30 minutes; visible
   ticks every **5 minutes**, slightly shorter than the major ticks. The axis
   line, ticks and numbers can each be hidden independently.
 - The default scale is **0–3 mm/h**. Guides are hidden by default;
   when enabled, they mark **1 and 2 mm/h**.
   Small upward marks indicate precipitation above the selected ceiling.
-- Rain at or above **2.5 mm/h** is red by default; lower rates stay white.
+- Rain at or above **2.5 mm/h** is red by default; lower rates use the theme’s rain colour.
   The colour changes at the interpolated threshold crossing, including when
   the curve is capped at the ceiling. This is a visual highlight, not an alert.
 - A solid flat line is a dry forecast. A **dotted interval means missing data**;
@@ -84,6 +83,20 @@ is dotted. Missing samples are not joined with an invented line.
 
 ## Settings
 
+### Themes
+
+Below **Open Yr**, a single row offers **Light**, **Dark** and **Minimal**.
+Light is the default for a new installation: a blue rain line and dark labels
+on a pale, rounded background. Dark uses a blue line on charcoal. Minimal
+restores the original thin white lines on a transparent background.
+Existing widgets and saved defaults keep their appearance when upgrading.
+
+Choosing a theme changes colours, padding, corners, line thickness and axis
+appearance. Location, update intervals, rainfall scale and highlight threshold
+remain unchanged. All appearance controls remain editable, including separate
+rain and axis colours (picker or hex) and corner rounding. Modified presets
+show **Theme · Custom** until their settings match a preset again.
+
 ### Languages
 
 Rainline supports English, Norwegian Bokmål, Swedish, Finnish and Danish.
@@ -106,7 +119,7 @@ or selecting a fixed place, grey/white/hidden guides, thin/normal forecast
 stroke, time labels, and automatic updates. Font edges use normal Android antialiasing.
 
 **Time axis** has separate switches for the axis line, ticks and numbers, plus
-a live preview and number-size slider (8–24, default 11). Larger numbers get
+a live preview and number-size slider (8–24; Light/Dark use 12, Minimal uses 11). Larger numbers get
 more space below the graph and shrink on very narrow widgets to prevent
 overlap. Turning all three switches off shows only the rain curve (and any
 enabled horizontal guides or data-status marker). A dry forecast still draws
@@ -118,7 +131,7 @@ preserved; choose Hidden explicitly to remove them from an existing widget.
 **Rainfall scale and highlight** sets the graph ceiling and highlight threshold
 independently (0.1–100 mm/h). The scale stays fixed at your chosen value;
 the two guides divide it into thirds. Turn highlighting off to keep the entire
-forecast line white. Existing widgets receive the new 3 mm/h ceiling and
+forecast line in the selected rain colour. Existing widgets receive the new 3 mm/h ceiling and
 2.5 mm/h highlight defaults when upgrading from 0.1.2.
 
 **Rain highlight colour** offers a visual colour picker, hue slider and
@@ -131,8 +144,8 @@ needed to keep a very small widget readable. This controls spacing inside the
 widget; the launcher may reserve additional space around it.
 
 **Background colour** includes a visual saturation/brightness picker, hue
-slider, opacity slider, and hex entry. The default is fully transparent;
-previously saved colours are preserved. Tap **Transparent**, then **Apply**
+slider, opacity slider, and hex entry. Light and Dark use opaque backgrounds;
+Minimal is fully transparent. Previously saved colours are preserved. Tap **Transparent**, then **Apply**
 to remove an existing widget's background. Use **#RRGGBB** for opaque colours or
 **#AARRGGBB** with opacity first. For example, **#000000** is opaque black,
 **#80000000** is half-transparent black and **#00000000** is fully transparent.
@@ -280,10 +293,11 @@ data is separately licensed under [CC BY 4.0](https://creativecommons.org/licens
 The in-app About screen includes source attribution, the data licence,
 the graph transformations and Rainline's independent status.
 
-This first version is a locally signed **debug build**, not a Play Store release.
-Before a Play release, finalize the application ID and signing key and complete
-the store listing and policy declarations. The repository URL is already the
-default MET contact and in-app source link. These can be overridden for a fork:
+The build commands above produce a locally signed **debug build**. Release
+bundles need separate signing; signing keys and generated APKs/AABs are not
+included in the repository. The application ID is `app.rainline`.
+The repository URL is the default MET contact and in-app source link.
+These can be overridden for a fork:
 
 ~~~sh
 ./gradlew :app:bundleRelease \
@@ -292,14 +306,14 @@ default MET contact and in-app source link. These can be overridden for a fork:
 ~~~
 
 The test build identifies itself as
-**Rainline/0.1.12 (https://github.com/erikhardlyworking/minimalistRainline)**.
+**Rainline/0.1.15 (https://github.com/erikhardlyworking/minimalistRainline)**.
 The metContact property is sent in the User-Agent; sourceUrl controls the
 in-app repository link. These values are public, not secrets.
 
 Public release also needs release signing, current Play Console declarations,
 review of the background-location permission for this core feature, and testing
-on additional Android versions/launchers. UI text is English in this first
-version; it should be extracted fully for translation before localization.
+on additional Android versions/launchers. UI text is available in English,
+Norwegian Bokmål, Swedish, Finnish and Danish.
 
 MET's [API terms](https://docs.api.met.no/doc/TermsOfService) recommend a caching
 proxy for mobile apps and require an agreement above 20 requests/second across

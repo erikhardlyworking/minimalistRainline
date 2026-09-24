@@ -22,8 +22,10 @@ public final class ChartRenderer {
 
     public static void draw(Canvas canvas, int width, int height, float dp, WidgetSettings settings,
                             Forecast forecast, long now, ForecastState state) {
-        canvas.drawColor(settings.backgroundColor);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(settings.backgroundColor);
+        float cornerRadius = Math.min(settings.cornerRadius * dp, Math.min(width, height) / 2f);
+        canvas.drawRoundRect(0, 0, width, height, cornerRadius, cornerRadius, p);
         p.setStrokeCap(Paint.Cap.ROUND);
         float left = settings.paddingLeft * dp, rightPadding = settings.paddingRight * dp;
         // Large user-selected padding must not erase a small widget or overlap its labels.
@@ -66,7 +68,7 @@ public final class ChartRenderer {
         }
 
         List<ForecastWindow.Segment> segments = ForecastWindow.segments(state == ForecastState.DATA ? forecast : null, now);
-        p.setColor(Color.WHITE);
+        p.setColor(settings.foregroundColor);
         p.setStrokeWidth(.65f * dp);
         if (settings.showAxis) {
             for (ForecastWindow.Segment segment : segments)
@@ -78,18 +80,17 @@ public final class ChartRenderer {
             for (int minute = 0; minute <= 120; minute += 5) {
                 boolean major = minute % 30 == 0;
                 float x = left + plotWidth * minute / 120;
-                p.setColor(Color.WHITE);
+                p.setColor(settings.foregroundColor);
                 p.setStrokeWidth(.65f * dp);
                 canvas.drawLine(x, base + 2 * dp, x, base + (major ? 6 : 5) * dp, p);
             }
         }
         if (settings.labels) {
-            p.setColor(Color.WHITE);
+            p.setColor(settings.foregroundColor);
             p.setTextAlign(Paint.Align.CENTER);
             for (int minute = 30; minute <= 90; minute += 30)
                 canvas.drawText(Integer.toString(minute), left + plotWidth * minute / 120, base + labelOffset, p);
         }
-        p.setColor(Color.WHITE);
         p.setStrokeWidth((settings.normalLine ? 1.65f : 1.05f) * dp);
         double[] cuts = new double[4];
         for (ForecastWindow.Segment segment : segments) {
@@ -130,7 +131,7 @@ public final class ChartRenderer {
         if (state != ForecastState.DATA) {
             float x = (left + right) / 2;
             float y = (top + base) / 2;
-            p.setColor(Color.WHITE);
+            p.setColor(settings.foregroundColor);
             p.setStrokeWidth(.8f * dp);
             p.setStyle(Paint.Style.STROKE);
             if (state == ForecastState.UNAVAILABLE) {
@@ -154,6 +155,6 @@ public final class ChartRenderer {
     }
 
     private static int rainColor(WidgetSettings settings, double rate) {
-        return settings.highlightRain && rate >= settings.highlightThreshold ? settings.highlightColor : Color.WHITE;
+        return settings.highlightRain && rate >= settings.highlightThreshold ? settings.highlightColor : settings.rainColor;
     }
 }

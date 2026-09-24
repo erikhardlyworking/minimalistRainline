@@ -187,7 +187,15 @@ public final class SettingsActivity extends Activity {
         small(getString(R.string.widget_refresh_help));
         button(getString(R.string.open_yr), () -> startActivity(new Intent(this, OpenForecastActivity.class)
                 .setAction(OpenForecastActivity.OPEN_YR)), false);
-        space(20);
+        boolean customTheme = true;
+        for (WidgetTheme theme : WidgetTheme.values()) if (theme.matches(settings)) customTheme = false;
+        section(getString(customTheme ? R.string.theme_custom : R.string.theme));
+        content.addView(new ThemePicker(this, settings, theme -> {
+            WidgetSettings s = store.get(widgetId);
+            theme.applyTo(s);
+            saveSettings(s);
+        }), new LinearLayout.LayoutParams(-1, -2));
+        small(getString(R.string.theme_customize_help));
 
         section(getString(R.string.location));
         row(getString(R.string.location_mode), settings.follow ? getString(R.string.follow_location) : getString(R.string.fixed_place_mode), this::chooseLocationMode);
@@ -226,6 +234,20 @@ public final class SettingsActivity extends Activity {
         row(getString(R.string.background_colour), ColorValue.format(settings.backgroundColor), () ->
                 AppearanceDialogs.background(this, store.get(widgetId), draft -> {
                     WidgetSettings s = store.get(widgetId); s.backgroundColor = draft.backgroundColor; saveSettings(s);
+                }));
+        row(getString(R.string.rain_colour), ColorValue.format(settings.rainColor), () ->
+                AppearanceDialogs.rainColour(this, store.get(widgetId), draft -> {
+                    WidgetSettings s = store.get(widgetId); s.rainColor = draft.rainColor; saveSettings(s);
+                }));
+        row(getString(R.string.axis_colour), ColorValue.format(settings.foregroundColor), () ->
+                AppearanceDialogs.axisColour(this, store.get(widgetId), draft -> {
+                    WidgetSettings s = store.get(widgetId); s.foregroundColor = draft.foregroundColor; saveSettings(s);
+                }));
+        row(getString(R.string.rounded_corners), getString(R.string.corner_radius, settings.cornerRadius), () ->
+                choices(getString(R.string.rounded_corners), new String[]{getString(R.string.corner_radius, 0),
+                        getString(R.string.corner_radius, 8), getString(R.string.corner_radius, 16), getString(R.string.corner_radius, 24)},
+                        settings.cornerRadius / 8, chosen -> {
+                    WidgetSettings s = store.get(widgetId); s.cornerRadius = chosen * 8; saveSettings(s);
                 }));
         row(getString(R.string.horizontal_guides), new String[]{getString(R.string.light_grey), getString(R.string.white), getString(R.string.hidden)}[settings.guides], () ->
                 choices(getString(R.string.horizontal_guides), new String[]{getString(R.string.light_grey), getString(R.string.white), getString(R.string.hidden)}, settings.guides, chosen -> {

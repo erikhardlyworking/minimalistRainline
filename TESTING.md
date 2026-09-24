@@ -1,9 +1,22 @@
 # Testing
 
-Version: 0.1.12. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.15. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
+
+- 24 September 2026, 0.1.15: customization hint added in all five languages;
+  debug build and translation validation passed (202 entries per translation).
+  Installed on the Samsung S25 Ultra as an in-place update and confirmed
+  version 0.1.15 (16), preserving existing settings. Before the GitHub push,
+  a fresh export of the staged repository built the app and test APKs, passed
+  all 56 unit tests and lint (0 errors), without local generated artifacts.
+- 0.1.14: 56 unit tests and Android lint passed (0 errors). Theme migration,
+  colours and persistence are covered by unit tests. Native emulator checks
+  passed for Light, Dark and Minimal at four widget sizes, loading and retry
+  states, rounded backgrounds, theme selection and custom colour dialogs,
+  alongside the existing widget smoke suite. All five language layouts passed
+  at 360 dp width, and the native theme previews were visually inspected.
 
 - 18 September 2026, Play preparation for 0.1.12: release AAB build and release
   lint passed (0 errors, 15 warnings). The AAB is unsigned; Play distribution,

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.15
+
+- Added a short hint below the themes explaining that appearance can be
+  customized further down the settings screen, in all five app languages.
+
+## 0.1.14
+
+- Compact Light, Dark and Minimal theme previews below Open Yr.
+- Light is the default for new installations. Existing widgets and saved
+  defaults retain their appearance; Minimal restores white on transparent.
+- Independently adjustable rain-line and axis colours, using a picker or hex,
+  plus configurable rounded corners.
+- Theme changes preserve location, update intervals, rainfall scale and
+  highlight threshold. All appearance settings remain independently editable.
+- Theme controls and descriptions translated into all five app languages.
+
 ## 0.1.5
 
 - A local diagnostic summary with explicit copying and no coordinates, place

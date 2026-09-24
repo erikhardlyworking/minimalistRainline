@@ -9,7 +9,7 @@ public final class SettingsStore {
         prefs = context.getSharedPreferences("widgets", Context.MODE_PRIVATE);
     }
     public WidgetSettings get(int id) {
-        String defaults = prefs.getString("widget.0", "{}");
+        String defaults = prefs.getString("widget.0", null);
         return WidgetSettings.fromJson(prefs.getString("widget." + id, defaults));
     }
     public boolean contains(int id) { return prefs.contains("widget." + id); }

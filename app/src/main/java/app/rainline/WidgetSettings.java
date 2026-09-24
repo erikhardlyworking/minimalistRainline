@@ -15,12 +15,15 @@ public final class WidgetSettings {
     public static final int[] REFRESH_INTERVALS = {5, 10, 15, 30, 60};
     public int labelSize = 11;
     public boolean showAxis = true, showTicks = true;
-    // Defaults retain the original chart placement, including space below its labels.
     public int paddingLeft = 8, paddingTop = 9, paddingRight = 8, paddingBottom = 1;
     public int backgroundColor = 0x00000000;
+    public int foregroundColor = 0xffffffff, rainColor = 0xffffffff;
+    public int cornerRadius;
     public float scaleMax = 3f, highlightThreshold = 2.5f;
     public boolean highlightRain = true;
     public int highlightColor = 0xffff0000;
+
+    public WidgetSettings() { WidgetTheme.LIGHT.applyTo(this); }
 
     public static boolean validRainRate(double rate) {
         return Double.isFinite(rate) && rate >= .1 && rate <= 100;
@@ -55,6 +58,8 @@ public final class WidgetSettings {
             o.put("paddingLeft", paddingLeft).put("paddingTop", paddingTop);
             o.put("paddingRight", paddingRight).put("paddingBottom", paddingBottom);
             o.put("backgroundColor", ColorValue.format(backgroundColor));
+            o.put("foregroundColor", ColorValue.format(foregroundColor)).put("rainColor", ColorValue.format(rainColor));
+            o.put("cornerRadius", cornerRadius);
             o.put("scaleMax", scaleMax).put("highlightThreshold", highlightThreshold);
             o.put("highlightRain", highlightRain).put("highlightColor", ColorValue.format(highlightColor));
             return o.toString();
@@ -63,8 +68,12 @@ public final class WidgetSettings {
 
     public static WidgetSettings fromJson(String json) {
         WidgetSettings s = new WidgetSettings();
+        if (json == null) return s;
         try {
             JSONObject o = new JSONObject(json);
+            // Saved widgets predate themes. Missing fields retain the original white,
+            // transparent appearance; only an absent record gets the Light default.
+            WidgetTheme.MINIMAL.applyTo(s);
             s.follow = o.optBoolean("follow", true);
             s.latitude = o.optDouble("lat", Double.NaN);
             s.longitude = o.optDouble("lon", Double.NaN);
@@ -86,6 +95,11 @@ public final class WidgetSettings {
             s.paddingBottom = padding(o.optInt("paddingBottom", s.labels ? 1 : 5));
             try { s.backgroundColor = ColorValue.parse(o.optString("backgroundColor", "#00000000")); }
             catch (IllegalArgumentException ignoredColor) { /* Keep the transparent default. */ }
+            try { s.foregroundColor = 0xff000000 | ColorValue.parse(o.optString("foregroundColor", "#FFFFFF")); }
+            catch (IllegalArgumentException ignoredColor) { /* Keep legacy white. */ }
+            try { s.rainColor = 0xff000000 | ColorValue.parse(o.optString("rainColor", "#FFFFFF")); }
+            catch (IllegalArgumentException ignoredColor) { /* Keep legacy white. */ }
+            s.cornerRadius = Math.max(0, Math.min(24, o.optInt("cornerRadius", 0)));
             double scale = o.optDouble("scaleMax", s.scaleMax);
             if (validRainRate(scale)) s.scaleMax = (float) scale;
             double threshold = o.optDouble("highlightThreshold", s.highlightThreshold);

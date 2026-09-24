@@ -13,6 +13,7 @@ final class ForecastChecks {
     static void run(Context context) throws Exception {
         long now = System.currentTimeMillis();
         WidgetSettings settings = new WidgetSettings();
+        WidgetTheme.MINIMAL.applyTo(settings);
         settings.follow = false;
         settings.latitude = 60; settings.longitude = 10;
         settings.showAxis = settings.showTicks = settings.labels = false;
