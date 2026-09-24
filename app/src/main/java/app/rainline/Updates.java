@@ -63,7 +63,10 @@ public final class Updates {
                     .setPeriodic(15 * Forecast.MINUTE, 5 * Forecast.MINUTE)
                     .setPersisted(true).setBackoffCriteria(60_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build());
         } else if (!automatic) jobs.cancel(PERIODIC_JOB);
-        if (!automatic) jobs.cancel(IMMEDIATE_JOB);
+        if (!automatic) {
+            jobs.cancel(IMMEDIATE_JOB);
+            jobs.cancel(RecoveryScheduler.JOB_ID);
+        }
         AlarmManager alarms = context.getSystemService(AlarmManager.class);
         PendingIntent pending = PendingIntent.getBroadcast(context, 0,
                 new Intent(context, RefreshReceiver.class).setAction("app.rainline.TICK"),
@@ -152,32 +155,27 @@ public final class Updates {
         // A completed failure must be shown even while its JobService is finishing.
         return queued != null && queued.getExtras().getLong(REQUESTED_AT) > store.attemptedAt(id);
     }
-    static Future<?> refreshWidget(Context context, int id, Runnable completed) {
+    static Future<?> refreshJob(Context context, int manualWidget, MetClient client,
+                                java.util.function.Consumer<RefreshResult> completed) {
         Context app = context.getApplicationContext();
         return IO.submit(() -> {
+            RefreshResult result = new RefreshResult(RefreshResult.Kind.NO_WIDGETS);
             try {
-                // A tap is manual even with automatic updates disabled. Location access
-                // remains background access because no activity has been opened.
-                if (isOurWidget(app, id) && deviceActive(app)) refreshOne(app, id, false, true);
-            } finally {
-                RainWidgetProvider.render(app, id);
-                new Handler(Looper.getMainLooper()).post(completed);
-            }
-        });
-    }
-    public static Future<?> refreshWidgets(Context context, Runnable completed) {
-        Context app = context.getApplicationContext();
-        return IO.submit(() -> {
-            try {
-                if (!canFetchInBackground(app)) return;
                 SettingsStore store = new SettingsStore(app);
-                for (int id : widgetIds(app)) {
-                    if (Thread.currentThread().isInterrupted() || !deviceActive(app)) break;
-                    if (store.get(id).automatic) refreshOne(app, id, false, false);
+                int[] ids = manualWidget > 0 ? new int[]{manualWidget} : widgetIds(app);
+                for (int id : ids) {
+                    if (!isOurWidget(app, id) || (manualWidget == 0 && !store.get(id).automatic)) continue;
+                    RefreshResult next = refreshOne(app, id, false, manualWidget > 0, client);
+                    result = result.kind == RefreshResult.Kind.NO_WIDGETS ? next : result.merge(next);
+                    if (Thread.currentThread().isInterrupted()) {
+                        result = new RefreshResult(RefreshResult.Kind.CANCELLED);
+                        break;
+                    }
                 }
             } finally {
                 RainWidgetProvider.renderAll(app);
-                new Handler(Looper.getMainLooper()).post(completed);
+                RefreshResult outcome = result;
+                new Handler(Looper.getMainLooper()).post(() -> completed.accept(outcome));
             }
         });
     }
@@ -187,7 +185,7 @@ public final class Updates {
         settingsRefreshId = id;
         Context app = context.getApplicationContext();
         IO.execute(() -> {
-            try { refreshOne(app, id, true, manual); }
+            try { refreshOne(app, id, true, manual, new MetClient(app)); }
             finally {
                 settingsRefreshId = -1;
                 refreshing.set(false);
@@ -205,18 +203,28 @@ public final class Updates {
         return power != null && power.isInteractive() && (keyguard == null || !keyguard.isKeyguardLocked());
     }
     static boolean canFetchInBackground(Context context) {
-        if (!deviceActive(context)) return false;
+        return deviceActive(context) && hasAutomaticWidgets(context);
+    }
+    static boolean hasAutomaticWidgets(Context context) {
         SettingsStore store = new SettingsStore(context);
         for (int id : widgetIds(context)) if (store.get(id).automatic) return true;
         return false;
     }
 
-    private static void refreshOne(Context context, int id, boolean foreground, boolean manual) {
+    static RefreshResult refreshOne(Context context, int id, boolean foreground, boolean manual, MetClient client) {
         SettingsStore store = new SettingsStore(context);
         WidgetSettings settings = store.get(id);
         long now = System.currentTimeMillis();
         // Recheck on the worker: another widget or foreground refresh may have filled this cache.
-        if (!manual && !automaticRefreshDue(context, settings, now)) return;
+        if (Thread.currentThread().isInterrupted()) return new RefreshResult(RefreshResult.Kind.CANCELLED);
+        if (!manual && !automaticRefreshDue(context, settings, now)) {
+            RefreshResult cached = notDue(settings, client, now);
+            // A sleeping backoff wait gets only the single sleep catch-up, too.
+            if (cached.needsRecovery() && !foreground && !deviceActive(context))
+                return new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED, cached.retryAt);
+            return cached;
+        }
+        if (!foreground && !deviceActive(context)) return new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED);
         UpdateIssue stage = UpdateIssue.LOCATION_UNAVAILABLE;
         inFlight.add(id);
         RainWidgetProvider.render(context, id);
@@ -237,11 +245,14 @@ public final class Updates {
             if (!settings.hasLocation()) throw UpdateIssue.LOCATION_MISSING.failure("Choose a location to get your forecast.");
             if (settings.locationExpired(now)) throw UpdateIssue.LOCATION_STALE.failure("Open Rainline to update your location.");
             // The display may have turned off during a location request. Keep the cached forecast then.
-            if (!foreground && !deviceActive(context)) return;
+            if (!foreground && !deviceActive(context)) return new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED);
             // Location resolution may have changed the coordinate key. Each place has its own cadence.
-            if (!manual && !weatherCheckDue(context, settings, System.currentTimeMillis())) return;
+            if (Thread.currentThread().isInterrupted()) return new RefreshResult(RefreshResult.Kind.CANCELLED);
+            if (!manual && !weatherCheckDue(context, settings, System.currentTimeMillis()))
+                return notDue(settings, client, System.currentTimeMillis());
             stage = UpdateIssue.IO_ERROR;
-            ForecastCache.Entry entry = new MetClient(context).fetch(settings.latitude, settings.longitude);
+            ForecastCache.Entry entry = client.fetch(settings.latitude, settings.longitude);
+            if (Thread.currentThread().isInterrupted()) return new RefreshResult(RefreshResult.Kind.CANCELLED);
             Forecast result;
             try { result = entry.forecast(); }
             catch (org.json.JSONException e) { throw UpdateIssue.INVALID_RESPONSE.failure("The stored forecast is unreadable."); }
@@ -250,12 +261,23 @@ public final class Updates {
             if (settings.sameLocation(store.get(id))) store.status(id,
                     entry.deprecated ? "MET is retiring this API version. Check for a Rainline update." : "",
                     entry.deprecated ? UpdateIssue.API_DEPRECATED : UpdateIssue.NONE, System.currentTimeMillis());
+            return new RefreshResult(RefreshResult.Kind.SUCCESS);
         } catch (IOException e) {
+            if (Thread.currentThread().isInterrupted()) return new RefreshResult(RefreshResult.Kind.CANCELLED);
+            UpdateIssue issue = UpdateIssue.from(e, stage);
             if (settings.sameLocation(store.get(id)) || !store.get(id).hasLocation())
-                store.status(id, e.getMessage() == null ? "Couldn't update the forecast." : e.getMessage(), UpdateIssue.from(e, stage), System.currentTimeMillis());
+                store.status(id, e.getMessage() == null ? "Couldn't update the forecast." : e.getMessage(), issue, System.currentTimeMillis());
+            return new RefreshResult(RefreshResult.transientIssue(issue) ? RefreshResult.Kind.RETRYABLE_FAILURE
+                    : RefreshResult.Kind.PERMANENT_FAILURE, settings.hasLocation()
+                    ? client.retryNotBefore(ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : 0);
         } finally {
             inFlight.remove(id);
             RainWidgetProvider.render(context, id);
         }
+    }
+    private static RefreshResult notDue(WidgetSettings settings, MetClient client, long now) {
+        long retryAt = settings.hasLocation()
+                ? client.retryNotBefore(ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : 0;
+        return new RefreshResult(retryAt > now ? RefreshResult.Kind.HTTP_BACKOFF : RefreshResult.Kind.CACHE_NOT_DUE, retryAt);
     }
 }

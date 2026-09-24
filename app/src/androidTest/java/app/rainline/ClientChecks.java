@@ -117,7 +117,7 @@ final class ClientChecks {
             remove(directory);
         }
     }
-    private static String forecastJson(long now) {
+    static String forecastJson(long now) {
         return "{\"properties\":{\"meta\":{\"updated_at\":\"" + Instant.ofEpochMilli(now)
                 + "\",\"radar_coverage\":\"ok\",\"units\":{\"precipitation_rate\":\"mm/h\"}},\"timeseries\":["
                 + point(now) + "," + point(now + 5 * Forecast.MINUTE) + "]}}";
@@ -131,7 +131,7 @@ final class ClientChecks {
         if (children != null) for (File child : children) remove(child);
         if (file.exists() && !file.delete()) throw new AssertionError("Could not remove isolated test data");
     }
-    private static final class FakeConnection extends HttpURLConnection {
+    static final class FakeConnection extends HttpURLConnection {
         final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         final byte[] body;
         String expectedModified;

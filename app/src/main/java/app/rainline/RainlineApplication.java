@@ -33,7 +33,15 @@ public final class RainlineApplication extends Application {
         boolean wake = Intent.ACTION_SCREEN_ON.equals(action) || Intent.ACTION_USER_PRESENT.equals(action);
         if (!wake && !Intent.ACTION_TIME_TICK.equals(action)) return;
         if (wake) UpdateDiagnostics.event(context, Intent.ACTION_USER_PRESENT.equals(action) ? "unlock" : "screenOn");
-        if (!Updates.deviceActive(context) || Updates.widgetIds(context).length == 0) return;
+        if (Updates.widgetIds(context).length == 0) return;
+        if (!Updates.deviceActive(context)) {
+            // SCREEN_ON can precede unlock. Preserve one catch-up even if USER_PRESENT
+            // is later deferred; the follow-up itself still refuses HTTP while locked.
+            if (wake && Updates.hasAutomaticWidgets(context) && Updates.forecastCheckDue(context))
+                RecoveryScheduler.schedule(context, context.getSystemService(android.app.job.JobScheduler.class),
+                        new android.os.PersistableBundle(), new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED));
+            return;
+        }
         // Queue the fetch first, then immediately realign the cached graph without waiting for HTTP.
         if (wake) Updates.enqueue(context, true);
         RainWidgetProvider.renderAll(context);

@@ -50,6 +50,8 @@ public final class SmokeInstrumentation extends Instrumentation {
             SchedulingChecks.run(context);
             LocationChecks.run(context);
             RefreshChecks.run(context);
+            RecoveryChecks.run(context);
+            if (tap) RecoveryJobChecks.run(this, context);
             if (tap) TapChecks.run(this, context);
             if (wake) WakeChecks.run(this, context);
             long now = System.currentTimeMillis();
@@ -144,7 +146,8 @@ public final class SmokeInstrumentation extends Instrumentation {
                 network = " Live MET HTTPS fetch, JSON parsing and expiry-cache reuse also passed.";
             }
             results.putString("stream", "\nPassed: four widget sizes, bitmap budget, RemoteViews inflation, missing-data rendering, settings launch and layout capture; padding bounds, custom/transparent backgrounds and colour/padding dialog edits."
-                    + " Theme migration, presets, colours, rounded cards and theme selection also passed. Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, expedited quota fallback, queued-job promotion, disabled-background-location handling, settings navigation controls and private-data exclusion from diagnostics passed." + network + "\n");
+                    + " Theme migration, presets, colours, rounded cards and theme selection also passed. Rain scale, threshold crossings, clipping, custom/disabled highlights, rainfall settings and time axis controls also passed. HTTP/cache integration, retained radar-outage data, aged graph/loading/error rendering, expedited quota fallback, queued-job promotion, disabled-background-location handling, settings navigation controls and private-data exclusion from diagnostics passed." + " Bounded recovery, transport failures, backoff, cancellation and assigned-network checks passed."
+                    + (tap ? " Actual sleep/recovery JobService lifecycle and widget taps passed." : "") + network + "\n");
             finish(Activity.RESULT_OK, results);
         } catch (Throwable e) {
             results.putString("stream", "\nFAILED: " + android.util.Log.getStackTraceString(e));

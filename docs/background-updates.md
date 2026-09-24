@@ -1,12 +1,138 @@
 # Background refresh investigation
 
-Reviewed 14 September 2026; includes the 0.1.10 tap-to-refresh recovery path.
+Reviewed 24 September 2026; includes a Samsung capture on 0.1.15 and recovery hardening in 0.1.16.
 
 A graph becoming shorter proves that the cached bitmap was redrawn against
 the current time. It does not prove that Android started a weather job, that
 a usable location was available, or that MET returned a newer forecast.
 Opening the settings activity makes the process active and can obtain a fresh
 foreground location, so it can recover from several different problems.
+
+## Recovery hardening in 0.1.16
+
+The recorded 0.1.15 trace below remains evidence of deferred event delivery,
+not a reproduced network failure. This release fixes the separate recovery
+weaknesses identified while reviewing that trace:
+
+- Workers return a fixed completion category to JobService, including cache not
+  due, asleep/locked, transient failure, server backoff, permanent failure and
+  cancellation. Temporary automatic failures schedule a separate ordinary,
+  network-constrained job (1103), leaving the periodic schedule intact.
+- A burst permits at most two follow-ups: 60–90 seconds, then 120–150 seconds
+  after completion. Later MET backoff wins, followed by up to 30 seconds of
+  jitter. Attempt and ten-minute expiry live in JobInfo extras so a process
+  restart cannot reset their bounds. A delayed, expired recovery does no work.
+  Known permission/location/coverage/403/TLS/invalid-data failures do not start
+  a rapid retry. The normal periodic/wake/tap paths remain independent.
+- A due job that runs before unlock, or a delivered screen-on event while
+  locked, preserves one catch-up. If that attempt still finds the phone locked
+  or asleep, it stops. The worker checks power/lock state again after resolving
+  location. A running network request can still finish after the screen locks.
+- Recovery checks the currently placed/enabled widgets and their cache/cadence.
+  Disabling automatic updates cancels recovery. Repeated events coalesce a
+  queued burst instead of resetting its deadline. Manual taps remain one-shot
+  and never enable automatic updates implicitly.
+- On API 28+ requests use the job's assigned network, not a process-wide binding.
+  API 34+ assignment changes update a per-run reference for later connections.
+  A lost assignment becomes a retryable failure, with no silent default-network
+  fallback. Android 8 retains its default-network behavior.
+- Local diagnostics record fixed completion/recovery categories and the latest
+  network-change timestamp. No location, raw exception, event history or remote
+  diagnostic reporting was added. Stopped work cannot overwrite a replacement
+  job's completion or initiate another recovery burst.
+
+Validation includes fault-injected DNS failure → backoff → successful cached
+forecast, cancellation, sleep gates, retry bounds, coalescing, server delay,
+assigned-network loss/reassignment and existing cache/cadence tests. The actual
+Android 16 JobService was exercised with a sleeping widget, preserved follow-up,
+server-backoff wait, replacement recovery job and fresh-cache no-op. A separate
+emulator unlock fetched a real MET forecast through the assigned network and
+submitted it to the widget host. These active-process tests cannot establish
+that Samsung will deliver broadcasts promptly after an overnight freeze; that
+remains the purpose of the phone trial. No foreground service, ongoing
+notification, exact alarm, permission or power-setting change was introduced.
+
+## Follow-up on 24 September 2026 (0.1.15)
+
+The user reported that the morning forecast can take minutes to appear, while
+another clock widget keeps ticking. A widget tap refreshes promptly. Read-only
+ADB observation reproduced an automatic delay on the Samsung S25 Ultra without
+opening Rainline, tapping its widget, or changing permissions or power settings.
+
+All times below are UTC:
+
+- At 20:58:47 the device was transitioning out of dozing. The periodic job ran
+  and completed in roughly 21 ms, redrawing the old forecast without changing
+  the forecast-attempt timestamp. This is consistent with the awake/unlocked
+  guard skipping work during the transition; the old diagnostics did not record
+  which guard caused the skip, so it is not proof of the precise check.
+- By 20:58:52 the device was awake. Rainline subsequently remained cached and
+  frozen, with its broadcast queue reporting `INFINITE_DEFER`. Its recorded
+  screen-on and unlock times still referred to an earlier unlock. The user
+  confirmed that the home-screen graph still ended around 60 minutes.
+- At 21:00:42.850 Android delivered screen-on; unlock followed at .881 and the
+  app's alarm/system receiver at .903. A prompt job was scheduled at .866. The
+  refresh job completed roughly 0.28 seconds after starting, and the forecast
+  cache recorded a new check at 21:00:42.937. No widget tap occurred in this
+  interval. The user then confirmed that the widget had updated.
+- Afterward the phone was unlocked, background location permission was granted,
+  the app's standby bucket was Active, and no HTTP backoff was active. Active
+  standby classification therefore did not prevent this cached-process delay.
+
+This capture supports delayed event delivery, rather than a slow download, as
+the cause of this particular approximately two-minute wait. The alarm and wake
+broadcasts arrived together; the capture cannot establish which event caused
+Android to release the app. It also does not establish the cause of every
+previous morning delay. Diagnostics retain only the latest timestamps.
+
+Android explicitly documents deferred screen broadcasts for cached apps in its
+[broadcast guidance](https://developer.android.com/develop/background-work/background-tasks/broadcasts#android_14).
+A clock is not an equivalent test: Android supports
+[TextClock in RemoteViews](https://developer.android.com/reference/android/widget/RemoteViews),
+so a launcher-hosted clock can keep time without waking its provider app or
+requesting network data. The particular clock app was not inspected.
+
+### Separate recovery weaknesses found in the source
+
+These are findings for follow-up work, not fixes present in 0.1.15:
+
+1. Pending refresh jobs already require network connectivity, and
+   `RefreshJobService.onStopJob()` requests rescheduling when Android stops a
+   running job (including lost network constraints). Missing connectivity
+   before the job starts therefore need not lose that job. However, an I/O,
+   DNS or timeout exception caught inside `Updates.refreshOne()` becomes a
+   stored error; the completion callback still calls `jobFinished(params,
+   false)`. No failure outcome reaches JobService. A transient failure can thus
+   leave recovery to the next alarm, periodic job, received wake or user tap.
+   MET's local one-minute transport backoff only gates later requests; it does
+   not itself schedule one. A retryable worker outcome should reach JobService
+   so [Android's rescheduling and backoff](https://developer.android.com/reference/android/app/job/JobService#jobFinished(android.app.job.JobParameters,%20boolean))
+   can preserve the request. Permanent configuration failures, valid cache,
+   server Retry-After and the sleep gate need separate handling.
+2. The HTTP client currently opens connections on the default network. On API
+   28+, a job should instead use
+   [the network assigned in JobParameters](https://developer.android.com/reference/android/app/job/JobParameters#getNetwork()).
+   Android documents that the assigned and default networks can differ.
+   Using the assigned network, and its API 34+ change callback, would make
+   Wi-Fi/mobile handovers more robust. This is a correctness improvement, not
+   evidence that a handover caused the observed delay.
+3. Jobs that run before the phone is fully unlocked deliberately skip data
+   fetching, but also finish without preserving an immediate catch-up request.
+   A bounded recovery path for that transition is worth testing. Simply
+   retrying every skipped periodic job indefinitely while asleep would add
+   unnecessary work, and a retry still cannot guarantee immediate execution.
+   Recording a fixed completion outcome (success, asleep/locked, cache not due,
+   retryable failure) would distinguish these cases in future diagnostics.
+
+The current architecture remains appropriate for a widget without an ongoing
+notification: network-constrained jobs, cache-aware updates, inexact non-wakeup
+alarms, and an explicit tap action. Hardening the recovery paths above can
+improve reliability after execution is granted. It cannot make a deferred
+screen/unlock broadcast arrive promptly. WorkManager or a process-local network
+callback would not provide that missing guarantee. Samsung's Never sleeping
+apps option remains an optional user-controlled experiment, not a demonstrated
+fix for this cached-process behavior. No foreground service or notification
+mode is proposed for the requested minimal widget.
 
 ## Findings
 

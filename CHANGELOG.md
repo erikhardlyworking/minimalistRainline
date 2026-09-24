@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.16
+
+- Bounded automatic recovery after temporary network failures, without an
+  ongoing notification: up to two delayed, network-constrained follow-ups.
+- One catch-up when a due job or screen-on event arrives before unlock;
+  recovery never downloads while the phone is locked or asleep.
+- Jobs use Android's assigned network and accept assignment changes during
+  Wi-Fi/mobile handovers. HTTP caching and server retry delays still apply.
+- Local diagnostics distinguish job completion outcomes, recovery scheduling
+  and assigned-network changes. Samsung can still defer initial wake delivery.
+
 ## 0.1.15
 
 - Added a short hint below the themes explaining that appearance can be

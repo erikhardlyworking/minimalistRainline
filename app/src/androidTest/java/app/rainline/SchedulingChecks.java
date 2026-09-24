@@ -53,6 +53,36 @@ final class SchedulingChecks {
             Updates.scheduleRefresh(isolated, jobs, true, 43);
             check(jobs.attempts.size() == 2 && jobs.current.getExtras().getInt(Updates.MANUAL_WIDGET) == 43,
                     "Tapping another widget must not reuse the first widget's request");
+            jobs.current = null; jobs.attempts.clear();
+            android.os.PersistableBundle initial = new android.os.PersistableBundle();
+            RefreshResult failed = new RefreshResult(RefreshResult.Kind.RETRYABLE_FAILURE);
+            RecoveryScheduler.schedule(isolated, jobs, initial, failed);
+            JobInfo first = jobs.current;
+            check(first.getId() == RecoveryScheduler.JOB_ID && !first.isExpedited(), "Recovery must use an ordinary separate job");
+            check(first.getNetworkType() == JobInfo.NETWORK_TYPE_ANY, "Recovery lost network constraint");
+            check(first.getMinLatencyMillis() >= 60_000 && first.getMinLatencyMillis() <= 90_000, "First retry delay not bounded");
+            check(first.getExtras().getInt(RecoveryScheduler.ATTEMPT) == 1, "Missing persistent attempt count");
+            RecoveryScheduler.schedule(isolated, jobs, initial, failed);
+            check(jobs.attempts.size() == 1, "Repeated events replaced a queued recovery");
+            RecoveryScheduler.schedule(isolated, jobs, first.getExtras(), failed);
+            check(jobs.current.getExtras().getInt(RecoveryScheduler.ATTEMPT) == 2, "Second retry lost its attempt count");
+            check(jobs.current.getExtras().getLong(RecoveryScheduler.DEADLINE) == first.getExtras().getLong(RecoveryScheduler.DEADLINE),
+                    "Retry restarted its lifetime");
+            JobInfo second = jobs.current;
+            RecoveryScheduler.schedule(isolated, jobs, second.getExtras(), failed);
+            check(jobs.attempts.size() == 2, "Retries continued beyond their limit");
+            check(RecoveryScheduler.expired(second.getExtras(), second.getExtras().getLong(RecoveryScheduler.DEADLINE)),
+                    "Deferred recovery did not expire");
+            check(!RecoveryScheduler.expired(initial, Long.MAX_VALUE), "Normal jobs must not expire as recoveries");
+            jobs.current = null; jobs.attempts.clear();
+            RefreshResult asleep = new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED);
+            RecoveryScheduler.schedule(isolated, jobs, initial, asleep);
+            first = jobs.current;
+            RecoveryScheduler.schedule(isolated, jobs, first.getExtras(), asleep);
+            check(jobs.attempts.size() == 1, "Sleeping catch-up kept polling");
+            jobs.current = null; jobs.rejectAll = true;
+            RecoveryScheduler.schedule(isolated, jobs, initial, failed);
+            check(UpdateDiagnostics.recoveryOutcome(isolated).equals("rejected"), "Recovery rejection not recorded");
         } finally { context.deleteSharedPreferences("scheduling-checks-update-diagnostics"); }
     }
     private static final class FakeScheduler extends JobScheduler {

@@ -102,7 +102,12 @@ public final class Diagnostics {
             line(out, "App standby bucket", context.getSystemService(UsageStatsManager.class).getAppStandbyBucket());
         }
         if (jobs != null) for (JobInfo job : jobs.getAllPendingJobs()) {
-            String label = job.isPeriodic() ? "Periodic job" : "Refresh job";
+            String label = job.getId() == RecoveryScheduler.JOB_ID ? "Recovery job"
+                    : job.isPeriodic() ? "Periodic job" : "Refresh job";
+            if (job.getId() == RecoveryScheduler.JOB_ID) {
+                line(out, "Recovery attempt", job.getExtras().getInt(RecoveryScheduler.ATTEMPT));
+                line(out, "Recovery earliest run in seconds", Math.max(0, (job.getExtras().getLong("recoveryAt") - now + 999) / 1000));
+            }
             if (Build.VERSION.SDK_INT >= 31) line(out, label + " expedited", job.isExpedited());
             line(out, label + " waiting reason", UpdateDiagnostics.pendingReason(jobs, job));
         }
@@ -114,6 +119,10 @@ public final class Diagnostics {
         line(out, "Scheduling result", UpdateDiagnostics.outcome(context));
         line(out, "Last job started", age(UpdateDiagnostics.at(context, "started"), now));
         line(out, "Last job completed", age(UpdateDiagnostics.at(context, "completed"), now));
+        line(out, "Completion result", UpdateDiagnostics.completion(context));
+        line(out, "Last recovery decision", age(UpdateDiagnostics.at(context, "recoveryDecision"), now));
+        line(out, "Recovery result", UpdateDiagnostics.recoveryOutcome(context));
+        line(out, "Last assigned network change", age(UpdateDiagnostics.at(context, "networkChanged"), now));
         line(out, "Last job stopped", age(UpdateDiagnostics.at(context, "stopped"), now));
         line(out, "Last stop reason", UpdateDiagnostics.lastStop(context));
         line(out, "Location mode", settings.follow ? "follow" : "fixed");

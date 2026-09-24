@@ -1,9 +1,25 @@
 # Testing
 
-Version: 0.1.15. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.16. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
+
+- 24 September 2026, 0.1.16: 64 unit tests pass, including eight recovery policy
+  tests. The native emulator suite covers fault-injected DNS failure/recovery,
+  HTTP backoff without repeat downloads, cancellation, sleeping/locked guards,
+  network assignment changes, recovery coalescing/limits and diagnostic privacy.
+  With `-e tap true`, it additionally exercises actual JobService completion and
+  recovery replacement on an Android 16 emulator, expired follow-ups, disabling
+  automatic updates, and the existing widget-tap tests. These checks use fake
+  responses or local cache/backoff, with no MET requests.
+- The separate `-e wakeOnly true` emulator check passes: unlock fetched a real
+  MET forecast through the job's assigned network and submitted it to the host.
+  This verifies an active app process, not Samsung's overnight event delivery.
+  Multi-day phone testing is still needed to measure the practical improvement.
+- Final 0.1.16 debug app/test builds and lint pass (0 errors, 13 existing warnings).
+  Installed version 0.1.16 (17) in place on the Samsung S25 Ultra, without clearing
+  app data or changing the phone's permissions, network or power settings.
 
 - 24 September 2026, 0.1.15: customization hint added in all five languages;
   debug build and translation validation passed (202 entries per translation).

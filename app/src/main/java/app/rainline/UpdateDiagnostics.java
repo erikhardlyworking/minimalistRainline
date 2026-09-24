@@ -23,6 +23,16 @@ public final class UpdateDiagnostics {
     static void scheduled(Context context, String outcome) {
         prefs(context).edit().putLong("scheduled", System.currentTimeMillis()).putString("scheduleOutcome", outcome).apply();
     }
+    static void completed(Context context, RefreshResult result) {
+        prefs(context).edit().putLong("completed", System.currentTimeMillis())
+                .putString("completionOutcome", result.kind.name().toLowerCase(Locale.ROOT)).apply();
+    }
+    static void recovery(Context context, String outcome, long at) {
+        prefs(context).edit().putLong("recoveryDecision", System.currentTimeMillis())
+                .putString("recoveryOutcome", outcome).putLong("recoveryAt", at).apply();
+    }
+    static String completion(Context context) { return prefs(context).getString("completionOutcome", "none"); }
+    static String recoveryOutcome(Context context) { return prefs(context).getString("recoveryOutcome", "none"); }
     static void stopped(Context context, int reason) {
         prefs(context).edit().putLong("stopped", System.currentTimeMillis()).putInt("stopReason", reason).apply();
     }

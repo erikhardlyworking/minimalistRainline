@@ -157,8 +157,8 @@ Apply commits an appearance edit; Cancel leaves the widget untouched.
 **Diagnostics**, under About, previews a local summary of the app and Android
 versions, device model, widget dimensions, permissions, power/network state,
 forecast age and fixed update-error categories. It also shows the latest wake
-event and job timestamps, expedited scheduling outcomes and Android's reasons
-for delaying a job. For each widget it records the latest graph submitted to
+event and job timestamps, completion outcomes, recovery scheduling, assigned-network
+changes, expedited scheduling outcomes and Android's reasons for delaying a job. For each widget it records the latest graph submitted to
 the launcher, its time origin, forecast issue time and state. A snapshot taken
 before the settings screen's own refresh is included, with ages as recorded
 at that time. Submission does not confirm that a launcher has painted the image.
@@ -211,6 +211,20 @@ or expedited work is left alone. If expedited quota is exhausted, an ordinary
 job is scheduled without an added delay. Older Android versions use ordinary
 jobs. Selected refresh intervals, valid HTTP cache entries and retry delays avoid unnecessary wake jobs
 when the location is configured and recent.
+Automatic jobs that fail with a temporary connection problem retain a bounded
+recovery request: at most two follow-ups, normally after 60–90 seconds and then
+120–150 seconds. A later MET retry time takes precedence, with jitter added
+before scheduling. Each recovery burst expires after ten minutes; it does not
+replace the regular update schedule. A due job or delivered screen-on event
+that arrives before unlock can queue one catch-up, which stops if the phone
+is still asleep/locked. No HTTP occurs while locked or asleep. Recovery jobs
+recheck enabled widgets, intervals, cache and server backoff before fetching.
+Disabling automatic updates cancels their follow-ups. Widget taps remain manual
+one-shot requests, including when automatic updates are disabled.
+On Android 9+ the HTTP connection uses the network assigned to the job;
+Android 14+ network reassignment updates the connection factory for subsequent
+requests. A failed connection during handover can use the bounded retry path.
+
 The receiver accepts protected unlock broadcasts from System UI's separate
 UID; version 0.1.7 incorrectly rejected those events on phones such as Samsung.
 While the process is running and the phone is awake and unlocked, minute

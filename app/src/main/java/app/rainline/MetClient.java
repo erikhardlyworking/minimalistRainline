@@ -23,7 +23,10 @@ public final class MetClient {
     }
 
     boolean retryDeferred(String key, long now) {
-        return now < Math.max(backoff.getLong("retry." + key, 0), backoff.getLong("retry.global", 0));
+        return now < retryNotBefore(key);
+    }
+    long retryNotBefore(String key) {
+        return Math.max(backoff.getLong("retry." + key, 0), backoff.getLong("retry.global", 0));
     }
 
     public ForecastCache.Entry fetch(double lat, double lon) throws IOException {
@@ -72,10 +75,12 @@ public final class MetClient {
             entry.checkedAt = now;
             entry.lastModified = header(connection, "Last-Modified");
             entry.etag = header(connection, "ETag");
+            if (Thread.currentThread().isInterrupted()) throw new IOException("Refresh cancelled");
             cache.write(key, entry);
             backoff.edit().remove("retry." + key).apply();
             return entry;
         } catch (IOException e) {
+            if (Thread.currentThread().isInterrupted()) throw e;
             if (backoff.getLong("retry." + key, 0) <= now)
                 backoff.edit().putLong("retry." + key, now + Forecast.MINUTE).apply();
             if (e instanceof UpdateIssue.Failure) throw e;
