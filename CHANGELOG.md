@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.17
+
+- Skip forecast HTTP requests outside a generous local boundary around Norway,
+  Sweden, Denmark and Finland, including manual refreshes.
+- Show the existing translated coverage message immediately for fixed places
+  outside the boundary. Keep checking followed positions so forecasts resume
+  after returning; radar availability inside the boundary still comes from MET.
+
 ## 0.1.16
 
 - Bounded automatic recovery after temporary network failures, without an

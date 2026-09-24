@@ -1,9 +1,24 @@
 # Testing
 
-Version: 0.1.16. The APK is a debug build for personal testing and updates earlier versions
+Version: 0.1.17. The APK is a debug build for personal testing and updates earlier versions
 without clearing existing widgets or preferences.
 
 ## Completed checks
+
+- 0.1.17: a single public Paris test coordinate returned HTTP 422 from the live
+  Nowcast JSON endpoint. The old app classified this as outside coverage but
+  could retry on later schedules. No phone location was used for this probe.
+- All 70 unit tests pass, including supported-country/coastal examples, excluded
+  travel destinations and Nordic territories, inclusive rectangle edges,
+  invalid positions and immediate widget availability state. Native emulator
+  checks confirm no HTTP for fixed/manual/followed outside positions, no server
+  backoff created by local rejection, and successful forecast recovery when a
+  followed position returns inside. Server 404/422 handling inside the generous
+  rectangle remains intact. The full widget/recovery/tap suite also passes.
+- 0.1.17 debug and test APKs build; lint reports 0 errors and 13 existing warnings.
+  Installed 0.1.17 (18) in place on the Samsung S25 Ultra, preserving app data.
+  The rectangle is deliberately approximate, not verified as an exact radar
+  footprint or country boundary; no new country/geocoding service is called.
 
 - 24 September 2026, 0.1.16: 64 unit tests pass, including eight recovery policy
   tests. The native emulator suite covers fault-injected DNS failure/recovery,

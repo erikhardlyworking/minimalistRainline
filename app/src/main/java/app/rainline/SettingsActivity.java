@@ -334,6 +334,9 @@ public final class SettingsActivity extends Activity {
                 + (s.follow ? " · " + time(s.locationAt) : "");
     }
     private String status(WidgetSettings settings, Forecast forecast) {
+        // A fixed place can be rejected before a worker ever runs. Explain it immediately.
+        if (NowcastRegion.outside(settings) && !settings.locationExpired(System.currentTimeMillis()))
+            return getString(R.string.error_coverage);
         String error = store.error(widgetId);
         String details;
         if (!settings.hasLocation()) details = getString(R.string.choose_location);

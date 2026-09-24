@@ -49,6 +49,23 @@ In settings, below the graph, **Forecast updated** and **Last checked** show the
 elapsed ages. **Open Yr** opens the installed Yr app (no.nrk.yr), with the Yr
 website as a fallback. Widget setup is labelled **Configure the widget**.
 
+## Forecast area
+
+Rainline makes no forecast request for positions clearly outside the supported
+Norway/Sweden/Denmark/Finland region. A local, inclusive rectangle of **54–72° N,
+4–32° E** provides a deliberately rough check, with room around coasts and
+borders. This is an app prefilter, not MET's exact domain or radar footprint:
+some nearby non-Nordic places pass, and MET still determines actual coverage.
+Iceland, Greenland, the Faroe Islands, Jan Mayen and Svalbard are outside it.
+
+Outside the rectangle, the widget shows its unavailable/refresh symbol and
+settings show the translated outside-forecast-area message. A tap does not
+bypass the local check. Fixed places skip automatic forecast checks; following
+location still rechecks the position on the existing awake update paths so
+forecasts can resume after returning. Normal location permissions, fix age,
+cache expiry and server backoff continue to apply. No country lookup service
+or additional network request is used for this check.
+
 ## Reading the graph
 
 - Left edge: now. Right edge: two hours from now.

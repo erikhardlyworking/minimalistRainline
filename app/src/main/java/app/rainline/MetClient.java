@@ -31,6 +31,8 @@ public final class MetClient {
 
     public ForecastCache.Entry fetch(double lat, double lon) throws IOException {
         String key = ForecastWindow.coordinateKey(lat, lon);
+        // Includes manual refreshes. Reject locally before cache/backoff or any HTTP.
+        NowcastRegion.requirePossibleCoverage(lat, lon);
         long now = System.currentTimeMillis();
         ForecastCache.Entry old = cache.read(key);
         if (old != null && now < old.expiresAt) return old; // Also applies to Refresh now.

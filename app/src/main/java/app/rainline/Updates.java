@@ -130,11 +130,15 @@ public final class Updates {
         return false;
     }
     static boolean automaticRefreshDue(Context context, WidgetSettings settings, long now) {
+        // Keep resolving followed positions on the existing wake/periodic paths so
+        // travelling back into the region resumes forecasts. Fixed places need no job.
+        if (NowcastRegion.outside(settings)) return settings.follow;
         // A stale followed position must be resolved before deciding which location's cache to use.
         return !settings.hasLocation() || settings.locationExpired(now) || weatherCheckDue(context, settings, now);
     }
     static boolean weatherCheckDue(Context context, WidgetSettings settings, long now) {
         if (!settings.hasLocation()) return true;
+        if (NowcastRegion.outside(settings)) return false;
         String key = ForecastWindow.coordinateKey(settings.latitude, settings.longitude);
         if (new MetClient(context).retryDeferred(key, now)) return false;
         ForecastCache.Entry entry = new ForecastCache(context).read(key);
@@ -244,6 +248,7 @@ public final class Updates {
             }
             if (!settings.hasLocation()) throw UpdateIssue.LOCATION_MISSING.failure("Choose a location to get your forecast.");
             if (settings.locationExpired(now)) throw UpdateIssue.LOCATION_STALE.failure("Open Rainline to update your location.");
+            NowcastRegion.requirePossibleCoverage(settings.latitude, settings.longitude);
             // The display may have turned off during a location request. Keep the cached forecast then.
             if (!foreground && !deviceActive(context)) return new RefreshResult(RefreshResult.Kind.ASLEEP_OR_LOCKED);
             // Location resolution may have changed the coordinate key. Each place has its own cadence.
@@ -276,6 +281,7 @@ public final class Updates {
         }
     }
     private static RefreshResult notDue(WidgetSettings settings, MetClient client, long now) {
+        if (NowcastRegion.outside(settings)) return new RefreshResult(RefreshResult.Kind.PERMANENT_FAILURE);
         long retryAt = settings.hasLocation()
                 ? client.retryNotBefore(ForecastWindow.coordinateKey(settings.latitude, settings.longitude)) : 0;
         return new RefreshResult(retryAt > now ? RefreshResult.Kind.HTTP_BACKOFF : RefreshResult.Kind.CACHE_NOT_DUE, retryAt);

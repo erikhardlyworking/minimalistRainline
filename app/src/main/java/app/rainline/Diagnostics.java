@@ -127,6 +127,8 @@ public final class Diagnostics {
         line(out, "Last stop reason", UpdateDiagnostics.lastStop(context));
         line(out, "Location mode", settings.follow ? "follow" : "fixed");
         line(out, "Location configured", settings.hasLocation());
+        line(out, "Inside approximate forecast region", settings.hasLocation()
+                ? String.valueOf(!NowcastRegion.outside(settings)) : "unknown");
         line(out, "Location stale", settings.follow && settings.locationExpired(now));
         if (settings.follow) line(out, "Location age", age(settings.locationAt, now));
         line(out, "Automatic updates", settings.automatic);
